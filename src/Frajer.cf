@@ -20,18 +20,25 @@ TBool. Type ::= "Bool";
 FTInt. FType ::= "IntFunc";
 FTBool. FType ::= "BoolFunc";
 
-_. VarIdent ::= Ident;
-_. ArrIdent ::= Ident;
-_. DictIdent ::= Ident;
-_. FuncIdent ::= Ident;
+Var. VarIdent ::= Ident;
+Arr. ArrIdent ::= Ident;
+Dict. DictIdent ::= Ident;
+Func. FuncIdent ::= Ident;
+
+{-
+_. Ident ::= VarIdent;
+_. Ident ::= ArrIdent;
+_. Ident ::= DictIdent;
+_. Ident ::= FuncIdent;
+-}
 
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC Expressions for general expressions
 -- E ::= Ie | Be
 
-_. Expr ::= IExpr;
-_. Expr ::= BExpr;
+IE. Expr ::= IExpr;
+BE. Expr ::= BExpr;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -114,7 +121,7 @@ ArgsNone. Args ::= "none";
 ArgsOne.  Args ::= Expr;
 ArgsMany. Args ::= Expr "," Args;
 
-Lambda. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
+Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 
 ParamsNone.      Params ::= "none";
 ParamVar.        Params ::= VarIdent ":" Type;

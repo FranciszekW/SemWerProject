@@ -14,12 +14,12 @@ ALEX_OPTS  = --ghc
 
 # Default goal.
 
-all : While/Test
+all : FraJer/Test
 
 # Rules for building the parser.
 
-While/Abs.hs While/Lex.x While/Par.y While/Print.hs While/Test.hs : While5.cf
-	bnfc --haskell -d While5.cf
+FraJer/Abs.hs FraJer/Lex.x FraJer/Par.y FraJer/Print.hs FraJer/Test.hs : FraJer.cf
+	bnfc --haskell -d FraJer.cf
 
 %.hs : %.y
 	${HAPPY} ${HAPPY_OPTS} $<
@@ -27,16 +27,16 @@ While/Abs.hs While/Lex.x While/Par.y While/Print.hs While/Test.hs : While5.cf
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
-While/Test : While/Abs.hs While/Lex.hs While/Par.hs While/Print.hs While/Test.hs
+FraJer/Test : FraJer/Abs.hs FraJer/Lex.hs FraJer/Par.hs FraJer/Print.hs FraJer/Test.hs
 	${GHC} ${GHC_OPTS} $@
 
 # Rules for cleaning generated files.
 
 clean :
-	-rm -f While/*.hi While/*.o While/*.log While/*.aux While/*.dvi
+	-rm -f FraJer/*.hi FraJer/*.o FraJer/*.log FraJer/*.aux FraJer/*.dvi
 
 distclean : clean
-	-rm -f While/Abs.hs While/Abs.hs.bak While/ComposOp.hs While/ComposOp.hs.bak While/Doc.txt While/Doc.txt.bak While/ErrM.hs While/ErrM.hs.bak While/Layout.hs While/Layout.hs.bak While/Lex.x While/Lex.x.bak While/Par.y While/Par.y.bak While/Print.hs While/Print.hs.bak While/Skel.hs While/Skel.hs.bak While/Test.hs While/Test.hs.bak While/XML.hs While/XML.hs.bak While/AST.agda While/AST.agda.bak While/Parser.agda While/Parser.agda.bak While/IOLib.agda While/IOLib.agda.bak While/Main.agda While/Main.agda.bak While/While5.dtd While/While5.dtd.bak While/Test While/Lex.hs While/Par.hs While/Par.info While/ParData.hs Makefile
-	-rmdir -p While/
+	-rm -f FraJer/Abs.hs FraJer/Abs.hs.bak FraJer/ComposOp.hs FraJer/ComposOp.hs.bak FraJer/Doc.txt FraJer/Doc.txt.bak FraJer/ErrM.hs FraJer/ErrM.hs.bak FraJer/Layout.hs FraJer/Layout.hs.bak FraJer/Lex.x FraJer/Lex.x.bak FraJer/Par.y FraJer/Par.y.bak FraJer/Print.hs FraJer/Print.hs.bak FraJer/Skel.hs FraJer/Skel.hs.bak FraJer/Test.hs FraJer/Test.hs.bak FraJer/XML.hs FraJer/XML.hs.bak FraJer/AST.agda FraJer/AST.agda.bak FraJer/Parser.agda FraJer/Parser.agda.bak FraJer/IOLib.agda FraJer/IOLib.agda.bak FraJer/Main.agda FraJer/Main.agda.bak FraJer/FraJer.dtd FraJer/FraJer.dtd.bak FraJer/Test FraJer/Lex.hs FraJer/Par.hs FraJer/Par.info FraJer/ParData.hs Makefile
+	-rmdir -p FraJer/
 
 # EOF

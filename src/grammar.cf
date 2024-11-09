@@ -1,83 +1,72 @@
 {-
 
-This file contains the grammar of TINY plus explanations how to render them
+This file contains the grammar of FraJer plus explanations how to render them
 in BNFC.
 
 -}
 
--- BNFC expressions for types
--- T ::= int | bool
-
-TInt.  Type ::= "Int";
-TBool. Type ::= "Bool";
-
--- BNFC expressions that define the part of the grammar for statements
--- S ::= x := e | skip | S1; S2 | if b then S1 else S2 | while b do S | begin x = e; S end
-
-SSeq.      Stmt ::= Stmt1 ";" Stmt; -- right associative, execution RtoL
---SSeq.      Stmt ::= Stmt ";" Stmt1; -- left associative, execution LtoR
-SAssgn.    Stmt1 ::= IntIdent ":=" Iexpr;
-SSkip.     Stmt1 ::= "skip";
--- We use this to declare a general form of expression, but parse it
--- differently.
-internal SIf. Stmt2 ::= "if" BExpr "then" Stmt "else" Stmt;
-sif1.       Stmt2 ::= "if" BExpr "then" Stmt "else" Stmt1;
-sif2.       Stmt2 ::= "if" BExpr "then" Stmt "fi";
-SWhile.     Stmt2 ::= "while" BExpr "do" Stmt1;
-SBlock.     Stmt2 ::= "begin" "var" IntIdent "=" Iexpr ";" Stmt "end";
-
-_. Stmt ::= Stmt1;
-_. Stmt1 ::= Stmt2;
-
-define sif1 b1 s1 s2 = SIf b1 s1 s2;
-define sif2 b1 s1  = SIf b1 s1 SSkip;
-
--- BNFC expressions that define the part of the grammar for functions, parameters and arguments
--- args ::= none | e | e, args
--- params ::= none |
+-- Syntax for comments
+comment "//" ;
+comment "/*" "*/" ;
 
 -- --------------------------------------------------------------------------------------------- --
 
--- BNFC expressions that define the part of the grammar for general expressions
+-- BNFC Expressions for types and identifiers
+-- T ::= int | bool
+-- FT ::= Ifun | Bfun
+
+TInt.  Type ::= "Int";
+TBool. Type ::= "Bool";
+FTInt. FType ::= "IntFunc";
+FTBool. FType ::= "BoolFunc";
+
+_. VarIdent ::= Ident;
+_. ArrIdent ::= Ident;
+_. DictIdent ::= Ident;
+_. FuncIdent ::= Ident;
+
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC Expressions for general expressions
 -- E ::= Ie | Be
 
-_. Expr ::= Iexpr;
+_. Expr ::= IExpr;
 _. Expr ::= BExpr;
 
 -- --------------------------------------------------------------------------------------------- --
 
--- BNFC expressions that define the part of the grammar for int expressions
+-- BNFC expressions for int expressions
 -- Ie ::= N | x | Ie1 + e2 | Ie1 ∗ e2 | Ie1 − e2 | Ie1 % Ie2 | Ie1 / Ie2
 --          | x++ | ++x | x-- | --x |
 --          | array a[Ie] | dict d[Ie] | dict d[Ib]
 --          | Ifun (args)
 
-EPlus.   Iexpr  ::= Iexpr "+" Iexpr1;
-EMinus.  Iexpr  ::= Iexpr "-" Iexpr1;
-EDiv.    Iexpr1 ::= Iexpr1 "/" Iexpr2;
-EMul.    Iexpr1 ::= Iexpr1 "*" Iexpr2;
-EMod.    Iexpr1 ::= Iexpr1 "%" Iexpr2;
-ENum.    Iexpr2 ::= Integer;
-EVar.    Iexpr2 ::= IntIdent;
+EPlus.   IExpr  ::= IExpr "+" IExpr1;
+EMinus.  IExpr  ::= IExpr "-" IExpr1;
+EDiv.    IExpr1 ::= IExpr1 "/" IExpr2;
+EMul.    IExpr1 ::= IExpr1 "*" IExpr2;
+EMod.    IExpr1 ::= IExpr1 "%" IExpr2;
+ENum.    IExpr2 ::= Integer;
+EVar.    IExpr2 ::= VarIdent;
 
-EPostInc. Iexpr2 ::= IntIdent "++";
-EPreInc.  Iexpr2 ::= "++" IntIdent;
-EPostDec. Iexpr2 ::= IntIdent "--";
-EPreDec.  Iexpr2 ::= "--" IntIdent;
+EPostInc. IExpr2 ::= VarIdent "++";
+EPreInc.  IExpr2 ::= "++" VarIdent;
+EPostDec. IExpr2 ::= VarIdent "--";
+EPreDec.  IExpr2 ::= "--" VarIdent;
 
-EArray.  Iexpr2 ::= ArrIdent "[" Iexpr "]";
-EDict.   Iexpr2 ::= DictIdent "[" Iexpr "]";
-EDictB.  Iexpr2 ::= DictIdent "[" BExpr "]";
+EArray.  IExpr2 ::= ArrIdent "[" IExpr "]";
+EDict.   IExpr2 ::= DictIdent "[" IExpr "]";
+EDictB.  IExpr2 ::= DictIdent "[" BExpr "]";
 
-EFunc.   Iexpr2 ::= FuncIdent "(" Args ")";
+EFuncVal.   IExpr2 ::= FuncIdent "(" Args ")";
 
-_.       Iexpr2 ::= "(" Iexpr ")"; -- We silently introduce parentheses
-_.       Iexpr1  ::= Iexpr2;       -- We silently make Iexpr1 and Iexpr2 equal
-_.       Iexpr ::= Iexpr1;         -- We silently make Iexpr and Iexpr1 equal
+_.       IExpr2 ::= "(" IExpr ")"; -- We silently introduce parentheses
+_.       IExpr1  ::= IExpr2;       -- We silently make IExpr1 and IExpr2 equal
+_.       IExpr ::= IExpr1;         -- We silently make IExpr and IExpr1 equal
 
 -- --------------------------------------------------------------------------------------------- --
 
--- BNFC expressions that define the part of the grammar for boolean expressions
+-- BNFC expressions for boolean expressions
 -- Be ::= true | false | x | Ie1 == Ie2 | Ie1 <= Ie2 | Ie1 >= Ie2 | Ie1 < Ie2 | Ie1 > Ie2 | Ie1 != Ie2
 --             | Be1 == Be2 | Be1 != Be2 | !Be | Be1 or Be2 | Be1 and Be2 | Be1 xor Be2
 --             | array a[Ie] | dict d[Ie] | dict d[Be] | dict has key [Ie] | dict has key [Be]
@@ -86,29 +75,119 @@ _.       Iexpr ::= Iexpr1;         -- We silently make Iexpr and Iexpr1 equal
 
 BTrue.  BExpr1 ::= "true";
 BFalse. BExpr1 ::= "false";
-BVar.   BExpr1 ::= BoolIdent;
-BEq.    BExpr1 ::= Iexpr "==" Iexpr;
-BLeq.   BExpr1 ::= Iexpr "<=" Iexpr;
-BGeq.   BExpr1 ::= Iexpr ">=" Iexpr;
-BLt.    BExpr1 ::= Iexpr "<" Iexpr;
-BGt.    BExpr1 ::= Iexpr ">" Iexpr;
-BNeq.   BExpr1 ::= Iexpr "!=" Iexpr;
+BVar.   BExpr1 ::= VarIdent;
+BEq.    BExpr1 ::= IExpr "==" IExpr;
+BLeq.   BExpr1 ::= IExpr "<=" IExpr;
+BGeq.   BExpr1 ::= IExpr ">=" IExpr;
+BLt.    BExpr1 ::= IExpr "<" IExpr;
+BGt.    BExpr1 ::= IExpr ">" IExpr;
+BNeq.   BExpr1 ::= IExpr "!=" IExpr;
 
 BEqB.   BExpr1 ::= BExpr "==" BExpr;
 BNeqB.  BExpr1 ::= BExpr "!=" BExpr;
 BNot.   BExpr1 ::= "!" BExpr1;
+-- && and || have the same priority (according to prof. Urzyczyn)
 BOr.    BExpr1 ::= BExpr "or" BExpr1;
 BAnd.   BExpr1 ::= BExpr "and" BExpr1;
 BXor.   BExpr1 ::= BExpr "xor" BExpr1;
 
-BArray. BExpr1 ::= ArrIdent "[" Iexpr "]";
-BDict.  BExpr1 ::= DictIdent "[" Iexpr "]";
+BArray. BExpr1 ::= ArrIdent "[" IExpr "]";
+BDict.  BExpr1 ::= DictIdent "[" IExpr "]";
 BDictB. BExpr1 ::= DictIdent "[" BExpr "]";
-BDictHasKey. BExpr1 ::= DictIdent "has" "key" "[" Iexpr "]";
+BDictHasKey.  BExpr1 ::= DictIdent "has" "key" "[" IExpr "]";
 BDictHasKeyB. BExpr1 ::= DictIdent "has" "key" "[" BExpr "]";
 
-BFunc.  BExpr1 ::= FuncIdent "(" Args ")";
+BFuncVal.  BExpr1 ::= FuncIdent "(" Args ")";
 
 _.       BExpr1 ::= "(" BExpr ")";
 _.       BExpr ::= BExpr1;
 
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC expressions that define the part of the grammar for parameters and arguments
+-- args ::= none | e | e, args
+-- Lambda ::= FType "lambda" (params) "->" { Instr }
+-- params ::= none | VarIdent ":" Type | FuncIdent ":" FType | Lambda
+--                 | VarIdent ":" Type, params | FuncIdent ":" FType, params | Lambda , params
+
+ArgsNone. Args ::= "none";
+ArgsOne.  Args ::= Expr;
+ArgsMany. Args ::= Expr "," Args;
+
+Lambda. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
+
+ParamsNone.      Params ::= "none";
+ParamVar.        Params ::= VarIdent ":" Type;
+ParamFunc.       Params ::= FuncIdent ":" FType;
+ParamLambda.     Params ::= Lambda;
+ParamVarMany.    Params ::= VarIdent ":" Type "," Params;
+ParamFuncMany.   Params ::= FuncIdent ":" FType "," Params;
+ParamLambdaMany. Params ::= Lambda "," Params;
+
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC expressions for instructions
+-- I ::= skip | I1; I2 | if (b) { I1 } else { I2 } | if (b) { I } | while (b) {I} | for (x = Ie1 to Ie2) { I }
+--            | return (e) | print(e) | swap (x, y) | break | break (Ie) | continue | continue outer (Ie)
+--            | vardef | funcdef | varassign | D
+--            | d [e] set (e1) | a [e] = e1
+-- D ::= debug assignment enable x | debug assignment disable x | debug reading enable x | debug reading disable x
+
+ISkip.     Instr1 ::= "skip";
+ISeq.      Instr ::= Instr1 ";" Instr; -- right associative, execution RtoL
+
+-- We use this to declare a general form of expression, but parse it
+-- differently.
+internal IIf. Instr1 ::= "if" "(" BExpr ")" "{" Instr "}" "else" "{" Instr "}";
+iif1.       Instr1 ::= "if" "(" BExpr ")" "{" Instr "}" "else" "{" Instr "}";
+iif2.       Instr1 ::= "if" "(" BExpr ")" "{" Instr "}";
+IWhile.     Instr1 ::= "while" "(" BExpr ")" "{" Instr "}";
+IFor.       Instr1 ::= "for" "(" VarIdent "=" IExpr "to" IExpr ")" "{" Instr "}";
+
+_. Instr ::= Instr1;
+
+define iif1 b1 i1 i2 = IIf b1 i1 i2;
+define iif2 b1 i1  = IIf b1 i1 ISkip;
+
+IReturn.    Instr1 ::= "return" "(" IExpr ")";
+IPrint.     Instr1 ::= "print" "(" IExpr ")";
+ISwap.      Instr1 ::= "swap" "(" VarIdent "," VarIdent ")";
+IBreak.     Instr1 ::= "break" "(" IExpr ")";
+IBreak1.    Instr1 ::= "break";
+IContinue.  Instr1 ::= "continue" "outer" "(" IExpr ")";
+IContinue0. Instr1 ::= "continue";
+
+-- Doesn't make sense
+-- define ibreak = IBreak 1;
+-- define icontinue = IContinue 0;
+
+-- grammar for defining, assigning variables and functions
+
+-- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
+-- funcdef ::= FType FuncIdent (params) { I }
+-- varassign ::= x = e | x += e | x -= e | x *= e | x /= e | x %= e
+
+VarDef.        Instr1 ::= Type VarIdent "=" Expr;
+ArrDefInit.    Instr1 ::= "Array" Type ArrIdent "[" IExpr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Instr1 ::= "Array" Type ArrIdent "[" IExpr "]";
+ArrElSet.      Instr1 ::= ArrIdent "[" IExpr "]" "=" "(" IExpr ")";
+DictDef.       Instr1 ::= "Dict" Type DictIdent;
+DictElSet.     Instr1 ::= DictIdent "[" IExpr "]" "set" "(" IExpr ")";
+
+FuncDef.       Instr1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
+
+VarAssign.         Instr1 ::= VarIdent "=" IExpr;
+VarAssignPlus.     Instr1 ::= VarIdent "+=" IExpr;
+VarAssignMinus.    Instr1 ::= VarIdent "-=" IExpr;
+VarAssignMul.      Instr1 ::= VarIdent "*=" IExpr;
+VarAssignDiv.      Instr1 ::= VarIdent "/=" IExpr;
+VarAssignMod.      Instr1 ::= VarIdent "%=" IExpr;
+
+-- grammar for debug instructions
+
+DebugAssEnable.     Instr1 ::= "debug" "assignment" "enable" VarIdent;      -- ;)
+DebugAssDisable.    Instr1 ::= "debug" "assignment" "disable" VarIdent;
+DebugReadEnable.    Instr1 ::= "debug" "reading" "enable" VarIdent;
+DebugReadDisable.   Instr1 ::= "debug" "reading" "disable" VarIdent;
+
+-- --------------------------------------------------------------------------------------------- --

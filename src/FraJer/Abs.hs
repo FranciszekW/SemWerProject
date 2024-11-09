@@ -2,9 +2,9 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
--- | The abstract syntax of language grammar.
+-- | The abstract syntax of language FraJer.
 
-module Grammar.Abs where
+module FraJer.Abs where
 
 import Prelude (Integer, String)
 import qualified Prelude as C (Eq, Ord, Show, Read)
@@ -76,7 +76,7 @@ data BExpr
 data Args = ArgsNone | ArgsOne Expr | ArgsMany Expr Args
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Lambda = Lambda FType Params Instr
+data Lambda = Lam FType Params Instr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Params

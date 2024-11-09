@@ -7,7 +7,7 @@
 
 {-# LANGUAGE PatternSynonyms #-}
 
-module Grammar.Lex where
+module FraJer.Lex where
 
 import Prelude
 

@@ -5,6 +5,8 @@ in BNFC.
 
 -}
 
+entrypoints Instr ;
+
 -- Syntax for comments
 comment "//" ;
 comment "/*" "*/" ;
@@ -20,6 +22,7 @@ TBool. Type ::= "Bool";
 FTInt. FType ::= "IntFunc";
 FTBool. FType ::= "BoolFunc";
 
+-- Probably will need to remove those, static type control is interpreter's job
 Var. VarIdent ::= Ident;
 Arr. ArrIdent ::= Ident;
 Dict. DictIdent ::= Ident;
@@ -39,6 +42,8 @@ _. Ident ::= FuncIdent;
 
 IE. Expr ::= IExpr;
 BE. Expr ::= BExpr;
+FuncVal.   Expr ::= FuncIdent "(" Args ")";
+VarVal.    Expr ::= VarIdent;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -54,7 +59,6 @@ EDiv.    IExpr1 ::= IExpr1 "/" IExpr2;
 EMul.    IExpr1 ::= IExpr1 "*" IExpr2;
 EMod.    IExpr1 ::= IExpr1 "%" IExpr2;
 ENum.    IExpr2 ::= Integer;
-EVar.    IExpr2 ::= VarIdent;
 
 EPostInc. IExpr2 ::= VarIdent "++";
 EPreInc.  IExpr2 ::= "++" VarIdent;
@@ -64,8 +68,6 @@ EPreDec.  IExpr2 ::= "--" VarIdent;
 EArray.  IExpr2 ::= ArrIdent "[" IExpr "]";
 EDict.   IExpr2 ::= DictIdent "[" IExpr "]";
 EDictB.  IExpr2 ::= DictIdent "[" BExpr "]";
-
-EFuncVal.   IExpr2 ::= FuncIdent "(" Args ")";
 
 _.       IExpr2 ::= "(" IExpr ")"; -- We silently introduce parentheses
 _.       IExpr1  ::= IExpr2;       -- We silently make IExpr1 and IExpr2 equal
@@ -82,21 +84,21 @@ _.       IExpr ::= IExpr1;         -- We silently make IExpr and IExpr1 equal
 
 BTrue.  BExpr1 ::= "true";
 BFalse. BExpr1 ::= "false";
-BVar.   BExpr1 ::= VarIdent;
-BEq.    BExpr1 ::= IExpr "==" IExpr;
-BLeq.   BExpr1 ::= IExpr "<=" IExpr;
-BGeq.   BExpr1 ::= IExpr ">=" IExpr;
-BLt.    BExpr1 ::= IExpr "<" IExpr;
-BGt.    BExpr1 ::= IExpr ">" IExpr;
-BNeq.   BExpr1 ::= IExpr "!=" IExpr;
+BEq.    BExpr ::= IExpr "==" IExpr;
+BLeq.   BExpr ::= IExpr "<=" IExpr;
+BGeq.   BExpr ::= IExpr ">=" IExpr;
+BLt.    BExpr ::= IExpr "<" IExpr;
+BGt.    BExpr ::= IExpr ">" IExpr;
+BNeq.   BExpr ::= IExpr "!=" IExpr;
 
-BEqB.   BExpr1 ::= BExpr "==" BExpr;
-BNeqB.  BExpr1 ::= BExpr "!=" BExpr;
+-- Shift - reduce conflict!!! TODO
+BEqB.   BExpr ::= BExpr "==" BExpr1;
+BNeqB.  BExpr ::= BExpr "!=" BExpr1;
 BNot.   BExpr1 ::= "!" BExpr1;
 -- && and || have the same priority (according to prof. Urzyczyn)
-BOr.    BExpr1 ::= BExpr "or" BExpr1;
-BAnd.   BExpr1 ::= BExpr "and" BExpr1;
-BXor.   BExpr1 ::= BExpr "xor" BExpr1;
+BOr.    BExpr ::= BExpr "or" BExpr1;
+BAnd.   BExpr ::= BExpr "and" BExpr1;
+BXor.   BExpr ::= BExpr "xor" BExpr1;
 
 BArray. BExpr1 ::= ArrIdent "[" IExpr "]";
 BDict.  BExpr1 ::= DictIdent "[" IExpr "]";
@@ -104,32 +106,30 @@ BDictB. BExpr1 ::= DictIdent "[" BExpr "]";
 BDictHasKey.  BExpr1 ::= DictIdent "has" "key" "[" IExpr "]";
 BDictHasKeyB. BExpr1 ::= DictIdent "has" "key" "[" BExpr "]";
 
-BFuncVal.  BExpr1 ::= FuncIdent "(" Args ")";
-
 _.       BExpr1 ::= "(" BExpr ")";
 _.       BExpr ::= BExpr1;
 
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC expressions that define the part of the grammar for parameters and arguments
--- args ::= none | e | e, args
+-- args ::= void | e | e, args | Lambda | Lambda, args
 -- Lambda ::= FType "lambda" (params) "->" { Instr }
--- params ::= none | VarIdent ":" Type | FuncIdent ":" FType | Lambda
---                 | VarIdent ":" Type, params | FuncIdent ":" FType, params | Lambda , params
+-- params ::= none | type x | ftype f
+--                 | type x, params | ftype f , params
 
-ArgsNone. Args ::= "none";
+ArgsVoid. Args ::= "void";
 ArgsOne.  Args ::= Expr;
 ArgsMany. Args ::= Expr "," Args;
-
-Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
+ArgsLambda. Args ::= Lambda;
+ArgsLambdaMany. Args ::= Lambda "," Args;
 
 ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= VarIdent ":" Type;
-ParamFunc.       Params ::= FuncIdent ":" FType;
-ParamLambda.     Params ::= Lambda;
-ParamVarMany.    Params ::= VarIdent ":" Type "," Params;
-ParamFuncMany.   Params ::= FuncIdent ":" FType "," Params;
-ParamLambdaMany. Params ::= Lambda "," Params;
+ParamVar.        Params ::= Type VarIdent;
+ParamFunc.       Params ::= FType FuncIdent;
+ParamVarMany.    Params ::= Type VarIdent "," Params;
+ParamFuncMany.   Params ::= FType FuncIdent "," Params;
+
+Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -140,8 +140,8 @@ ParamLambdaMany. Params ::= Lambda "," Params;
 --            | d [e] set (e1) | a [e] = e1
 -- D ::= debug assignment enable x | debug assignment disable x | debug reading enable x | debug reading disable x
 
-ISkip.     Instr1 ::= "skip";
-ISeq.      Instr ::= Instr1 ";" Instr; -- right associative, execution RtoL
+ISeq.      Instr ::= Instr1 ";" Instr; -- right associative, execution RtoL -- glupie to, ale trzeba
+ISkip.     Instr1 ::= "skip"; -- glupie to, ale trzeba
 
 -- We use this to declare a general form of expression, but parse it
 -- differently.
@@ -183,7 +183,7 @@ DictElSet.     Instr1 ::= DictIdent "[" IExpr "]" "set" "(" IExpr ")";
 
 FuncDef.       Instr1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
 
-VarAssign.         Instr1 ::= VarIdent "=" IExpr;
+VarAssign.         Instr1 ::= VarIdent "=" Expr;
 VarAssignPlus.     Instr1 ::= VarIdent "+=" IExpr;
 VarAssignMinus.    Instr1 ::= VarIdent "-=" IExpr;
 VarAssignMul.      Instr1 ::= VarIdent "*=" IExpr;

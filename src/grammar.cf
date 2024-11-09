@@ -1,0 +1,114 @@
+{-
+
+This file contains the grammar of TINY plus explanations how to render them
+in BNFC.
+
+-}
+
+-- BNFC expressions for types
+-- T ::= int | bool
+
+TInt.  Type ::= "Int";
+TBool. Type ::= "Bool";
+
+-- BNFC expressions that define the part of the grammar for statements
+-- S ::= x := e | skip | S1; S2 | if b then S1 else S2 | while b do S | begin x = e; S end
+
+SSeq.      Stmt ::= Stmt1 ";" Stmt; -- right associative, execution RtoL
+--SSeq.      Stmt ::= Stmt ";" Stmt1; -- left associative, execution LtoR
+SAssgn.    Stmt1 ::= IntIdent ":=" Iexpr;
+SSkip.     Stmt1 ::= "skip";
+-- We use this to declare a general form of expression, but parse it
+-- differently.
+internal SIf. Stmt2 ::= "if" BExpr "then" Stmt "else" Stmt;
+sif1.       Stmt2 ::= "if" BExpr "then" Stmt "else" Stmt1;
+sif2.       Stmt2 ::= "if" BExpr "then" Stmt "fi";
+SWhile.     Stmt2 ::= "while" BExpr "do" Stmt1;
+SBlock.     Stmt2 ::= "begin" "var" IntIdent "=" Iexpr ";" Stmt "end";
+
+_. Stmt ::= Stmt1;
+_. Stmt1 ::= Stmt2;
+
+define sif1 b1 s1 s2 = SIf b1 s1 s2;
+define sif2 b1 s1  = SIf b1 s1 SSkip;
+
+-- BNFC expressions that define the part of the grammar for functions, parameters and arguments
+-- args ::= none | e | e, args
+-- params ::= none |
+
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC expressions that define the part of the grammar for general expressions
+-- E ::= Ie | Be
+
+_. Expr ::= Iexpr;
+_. Expr ::= BExpr;
+
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC expressions that define the part of the grammar for int expressions
+-- Ie ::= N | x | Ie1 + e2 | Ie1 ∗ e2 | Ie1 − e2 | Ie1 % Ie2 | Ie1 / Ie2
+--          | x++ | ++x | x-- | --x |
+--          | array a[Ie] | dict d[Ie] | dict d[Ib]
+--          | Ifun (args)
+
+EPlus.   Iexpr  ::= Iexpr "+" Iexpr1;
+EMinus.  Iexpr  ::= Iexpr "-" Iexpr1;
+EDiv.    Iexpr1 ::= Iexpr1 "/" Iexpr2;
+EMul.    Iexpr1 ::= Iexpr1 "*" Iexpr2;
+EMod.    Iexpr1 ::= Iexpr1 "%" Iexpr2;
+ENum.    Iexpr2 ::= Integer;
+EVar.    Iexpr2 ::= IntIdent;
+
+EPostInc. Iexpr2 ::= IntIdent "++";
+EPreInc.  Iexpr2 ::= "++" IntIdent;
+EPostDec. Iexpr2 ::= IntIdent "--";
+EPreDec.  Iexpr2 ::= "--" IntIdent;
+
+EArray.  Iexpr2 ::= ArrIdent "[" Iexpr "]";
+EDict.   Iexpr2 ::= DictIdent "[" Iexpr "]";
+EDictB.  Iexpr2 ::= DictIdent "[" BExpr "]";
+
+EFunc.   Iexpr2 ::= FuncIdent "(" Args ")";
+
+_.       Iexpr2 ::= "(" Iexpr ")"; -- We silently introduce parentheses
+_.       Iexpr1  ::= Iexpr2;       -- We silently make Iexpr1 and Iexpr2 equal
+_.       Iexpr ::= Iexpr1;         -- We silently make Iexpr and Iexpr1 equal
+
+-- --------------------------------------------------------------------------------------------- --
+
+-- BNFC expressions that define the part of the grammar for boolean expressions
+-- Be ::= true | false | x | Ie1 == Ie2 | Ie1 <= Ie2 | Ie1 >= Ie2 | Ie1 < Ie2 | Ie1 > Ie2 | Ie1 != Ie2
+--             | Be1 == Be2 | Be1 != Be2 | !Be | Be1 or Be2 | Be1 and Be2 | Be1 xor Be2
+--             | array a[Ie] | dict d[Ie] | dict d[Be] | dict has key [Ie] | dict has key [Be]
+--             | Bf (args)
+
+
+BTrue.  BExpr1 ::= "true";
+BFalse. BExpr1 ::= "false";
+BVar.   BExpr1 ::= BoolIdent;
+BEq.    BExpr1 ::= Iexpr "==" Iexpr;
+BLeq.   BExpr1 ::= Iexpr "<=" Iexpr;
+BGeq.   BExpr1 ::= Iexpr ">=" Iexpr;
+BLt.    BExpr1 ::= Iexpr "<" Iexpr;
+BGt.    BExpr1 ::= Iexpr ">" Iexpr;
+BNeq.   BExpr1 ::= Iexpr "!=" Iexpr;
+
+BEqB.   BExpr1 ::= BExpr "==" BExpr;
+BNeqB.  BExpr1 ::= BExpr "!=" BExpr;
+BNot.   BExpr1 ::= "!" BExpr1;
+BOr.    BExpr1 ::= BExpr "or" BExpr1;
+BAnd.   BExpr1 ::= BExpr "and" BExpr1;
+BXor.   BExpr1 ::= BExpr "xor" BExpr1;
+
+BArray. BExpr1 ::= ArrIdent "[" Iexpr "]";
+BDict.  BExpr1 ::= DictIdent "[" Iexpr "]";
+BDictB. BExpr1 ::= DictIdent "[" BExpr "]";
+BDictHasKey. BExpr1 ::= DictIdent "has" "key" "[" Iexpr "]";
+BDictHasKeyB. BExpr1 ::= DictIdent "has" "key" "[" BExpr "]";
+
+BFunc.  BExpr1 ::= FuncIdent "(" Args ")";
+
+_.       BExpr1 ::= "(" BExpr ")";
+_.       BExpr ::= BExpr1;
+

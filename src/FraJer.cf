@@ -28,13 +28,6 @@ Arr. ArrIdent ::= Ident;
 Dict. DictIdent ::= Ident;
 Func. FuncIdent ::= Ident;
 
-{-
-_. Ident ::= VarIdent;
-_. Ident ::= ArrIdent;
-_. Ident ::= DictIdent;
-_. Ident ::= FuncIdent;
--}
-
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC Expressions for general expressions

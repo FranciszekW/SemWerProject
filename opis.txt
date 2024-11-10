@@ -1,6 +1,6 @@
 Zespół: Franciszek Wrzosek, Jerzy Szempliński
 
-Nasz język oparty jest językiem imperatywnym na składni języka C/C++ i służy do przeprowadzania obliczeń.
+Nasz język "FraJer" oparty jest językiem imperatywnym na składni języka C/C++ i służy do przeprowadzania obliczeń.
 Posiada dwa typy, Int i Bool, oraz kontenery takie jak tablica i słownik.
 Funkcje mogą być deklarowane również wewnątrz bloków, a w parametrach można definiować funkcje anonimowe. 
 Język posiada ułatwienia dla pracujących z liczbami, np. wyrażenia z efektami ubocznymi, oraz dodatki:

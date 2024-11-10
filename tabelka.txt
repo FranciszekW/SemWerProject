@@ -58,8 +58,8 @@ Język imperatywny, najlepiej w składni opartej o Pascala lub C.
 	
 	Dodatkowo:
 1	IntSwap  [1 pkt]
-1	Assignment debug + Read debug [2 pkt]
+1	Assignment debug + Read debug [3 pkt]
 1	Break z możliwością wyjścia z wielu pętli na raz, continue outer (n) [2 pkt]
 	
 	
-Podsumowanie: 15 punktów + 5 za dodatki
+Podsumowanie: 15 punktów + 6 za dodatki

@@ -38,40 +38,37 @@ _. Ident ::= FuncIdent;
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC Expressions for general expressions
--- E ::= Ie | Be
 
-IE. Expr ::= IExpr;
-BE. Expr ::= BExpr;
 FuncVal.   Expr ::= FuncIdent "(" Args ")";
 VarVal.    Expr ::= VarIdent;
 
 -- --------------------------------------------------------------------------------------------- --
 
--- BNFC expressions for int expressions
+-- BNFC expressions for int expressions (we do not distinguish between int and bool expressions,
+-- static type control in the interpreter will do that)
 -- Ie ::= N | x | Ie1 + e2 | Ie1 ∗ e2 | Ie1 − e2 | Ie1 % Ie2 | Ie1 / Ie2
 --          | x++ | ++x | x-- | --x |
 --          | array a[Ie] | dict d[Ie] | dict d[Ib]
 --          | Ifun (args)
 
-EPlus.   IExpr  ::= IExpr "+" IExpr1;
-EMinus.  IExpr  ::= IExpr "-" IExpr1;
-EDiv.    IExpr1 ::= IExpr1 "/" IExpr2;
-EMul.    IExpr1 ::= IExpr1 "*" IExpr2;
-EMod.    IExpr1 ::= IExpr1 "%" IExpr2;
-ENum.    IExpr2 ::= Integer;
+EPlus.   Expr  ::= Expr "+" Expr1;
+EMinus.  Expr  ::= Expr "-" Expr1;
+EDiv.    Expr1 ::= Expr1 "/" Expr2;
+EMul.    Expr1 ::= Expr1 "*" Expr2;
+EMod.    Expr1 ::= Expr1 "%" Expr2;
+ENum.    Expr2 ::= Integer;
 
-EPostInc. IExpr2 ::= VarIdent "++";
-EPreInc.  IExpr2 ::= "++" VarIdent;
-EPostDec. IExpr2 ::= VarIdent "--";
-EPreDec.  IExpr2 ::= "--" VarIdent;
+EPostInc. Expr2 ::= VarIdent "++";
+EPreInc.  Expr2 ::= "++" VarIdent;
+EPostDec. Expr2 ::= VarIdent "--";
+EPreDec.  Expr2 ::= "--" VarIdent;
 
-EArray.  IExpr2 ::= ArrIdent "[" IExpr "]";
-EDict.   IExpr2 ::= DictIdent "[" IExpr "]";
-EDictB.  IExpr2 ::= DictIdent "[" BExpr "]";
+EArray.  Expr2 ::= ArrIdent "[" Expr "]";
+EDict.   Expr2 ::= DictIdent "get" "[" Expr "]";
 
-_.       IExpr2 ::= "(" IExpr ")"; -- We silently introduce parentheses
-_.       IExpr1  ::= IExpr2;       -- We silently make IExpr1 and IExpr2 equal
-_.       IExpr ::= IExpr1;         -- We silently make IExpr and IExpr1 equal
+_.       Expr2 ::= "(" Expr ")"; -- We silently introduce parentheses
+_.       Expr1  ::= Expr2;       -- We silently make Expr1 and Expr2 equal
+_.       Expr ::= Expr1;         -- We silently make Expr and Expr1 equal
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -82,32 +79,23 @@ _.       IExpr ::= IExpr1;         -- We silently make IExpr and IExpr1 equal
 --             | Bf (args)
 
 
-BTrue.  BExpr1 ::= "true";
-BFalse. BExpr1 ::= "false";
-BEq.    BExpr ::= IExpr "==" IExpr;
-BLeq.   BExpr ::= IExpr "<=" IExpr;
-BGeq.   BExpr ::= IExpr ">=" IExpr;
-BLt.    BExpr ::= IExpr "<" IExpr;
-BGt.    BExpr ::= IExpr ">" IExpr;
-BNeq.   BExpr ::= IExpr "!=" IExpr;
+BTrue.  Expr2 ::= "true";
+BFalse. Expr2 ::= "false";
+EEq.    Expr1 ::= Expr1 "==" Expr2;
+ELeq.   Expr1 ::= Expr1 "<=" Expr2;
+EGeq.   Expr1 ::= Expr1 ">=" Expr2;
+ELt.    Expr1 ::= Expr1 "<" Expr2;
+EGt.    Expr1 ::= Expr1 ">" Expr2;
+ENeq.   Expr1 ::= Expr1 "!=" Expr2;
 
--- Shift - reduce conflict!!! TODO
-BEqB.   BExpr ::= BExpr "==" BExpr1;
-BNeqB.  BExpr ::= BExpr "!=" BExpr1;
-BNot.   BExpr1 ::= "!" BExpr1;
--- && and || have the same priority (according to prof. Urzyczyn)
-BOr.    BExpr ::= BExpr "or" BExpr1;
-BAnd.   BExpr ::= BExpr "and" BExpr1;
-BXor.   BExpr ::= BExpr "xor" BExpr1;
+BNot.   Expr2 ::= "!" Expr2;
+-- && and || have the same priority (according to prof. Urzyczyn), but lower than comparison operators
+BOr.    Expr ::= Expr "or" Expr1;
+BAnd.   Expr ::= Expr "and" Expr1;
+BXor.   Expr ::= Expr "xor" Expr1;
 
-BArray. BExpr1 ::= ArrIdent "[" IExpr "]";
-BDict.  BExpr1 ::= DictIdent "[" IExpr "]";
-BDictB. BExpr1 ::= DictIdent "[" BExpr "]";
-BDictHasKey.  BExpr1 ::= DictIdent "has" "key" "[" IExpr "]";
-BDictHasKeyB. BExpr1 ::= DictIdent "has" "key" "[" BExpr "]";
+BDictHasKey.  Expr2 ::= DictIdent "has" "key" "[" Expr "]";
 
-_.       BExpr1 ::= "(" BExpr ")";
-_.       BExpr ::= BExpr1;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -145,23 +133,23 @@ ISkip.     Instr1 ::= "skip"; -- glupie to, ale trzeba
 
 -- We use this to declare a general form of expression, but parse it
 -- differently.
-internal IIf. Instr1 ::= "if" "(" BExpr ")" "{" Instr "}" "else" "{" Instr "}";
-iif1.       Instr1 ::= "if" "(" BExpr ")" "{" Instr "}" "else" "{" Instr "}";
-iif2.       Instr1 ::= "if" "(" BExpr ")" "{" Instr "}";
-IWhile.     Instr1 ::= "while" "(" BExpr ")" "{" Instr "}";
-IFor.       Instr1 ::= "for" "(" VarIdent "=" IExpr "to" IExpr ")" "{" Instr "}";
+internal IIf. Instr1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+iif1.       Instr1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+iif2.       Instr1 ::= "if" "(" Expr ")" "{" Instr "}";
+IWhile.     Instr1 ::= "while" "(" Expr ")" "{" Instr "}";
+IFor.       Instr1 ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Instr "}";
 
 _. Instr ::= Instr1;
 
 define iif1 b1 i1 i2 = IIf b1 i1 i2;
 define iif2 b1 i1  = IIf b1 i1 ISkip;
 
-IReturn.    Instr1 ::= "return" "(" IExpr ")";
-IPrint.     Instr1 ::= "print" "(" IExpr ")";
+IReturn.    Instr1 ::= "return" "(" Expr ")";
+IPrint.     Instr1 ::= "print" "(" Expr ")";
 ISwap.      Instr1 ::= "swap" "(" VarIdent "," VarIdent ")";
-IBreak.     Instr1 ::= "break" "(" IExpr ")";
+IBreak.     Instr1 ::= "break" "(" Expr ")";
 IBreak1.    Instr1 ::= "break";
-IContinue.  Instr1 ::= "continue" "outer" "(" IExpr ")";
+IContinue.  Instr1 ::= "continue" "outer" "(" Expr ")";
 IContinue0. Instr1 ::= "continue";
 
 -- Doesn't make sense
@@ -175,20 +163,20 @@ IContinue0. Instr1 ::= "continue";
 -- varassign ::= x = e | x += e | x -= e | x *= e | x /= e | x %= e
 
 VarDef.        Instr1 ::= Type VarIdent "=" Expr;
-ArrDefInit.    Instr1 ::= "Array" Type ArrIdent "[" IExpr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Instr1 ::= "Array" Type ArrIdent "[" IExpr "]";
-ArrElSet.      Instr1 ::= ArrIdent "[" IExpr "]" "=" "(" IExpr ")";
+ArrDefInit.    Instr1 ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Instr1 ::= "Array" Type ArrIdent "[" Expr "]";
+ArrElSet.      Instr1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
 DictDef.       Instr1 ::= "Dict" Type DictIdent;
-DictElSet.     Instr1 ::= DictIdent "[" IExpr "]" "set" "(" IExpr ")";
+DictElSet.     Instr1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
 
 FuncDef.       Instr1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
 
 VarAssign.         Instr1 ::= VarIdent "=" Expr;
-VarAssignPlus.     Instr1 ::= VarIdent "+=" IExpr;
-VarAssignMinus.    Instr1 ::= VarIdent "-=" IExpr;
-VarAssignMul.      Instr1 ::= VarIdent "*=" IExpr;
-VarAssignDiv.      Instr1 ::= VarIdent "/=" IExpr;
-VarAssignMod.      Instr1 ::= VarIdent "%=" IExpr;
+VarAssignPlus.     Instr1 ::= VarIdent "+=" Expr;
+VarAssignMinus.    Instr1 ::= VarIdent "-=" Expr;
+VarAssignMul.      Instr1 ::= VarIdent "*=" Expr;
+VarAssignDiv.      Instr1 ::= VarIdent "/=" Expr;
+VarAssignMod.      Instr1 ::= VarIdent "%=" Expr;
 
 -- grammar for debug instructions
 

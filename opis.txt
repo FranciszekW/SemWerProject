@@ -1,0 +1,11 @@
+Zespół: Franciszek Wrzosek, Jerzy Szempliński
+
+Nasz język oparty jest językiem imperatywnym na składni języka C/C++ i służy do przeprowadzania obliczeń.
+Posiada dwa typy, Int i Bool, oraz kontenery takie jak tablica i słownik.
+Funkcje mogą być deklarowane również wewnątrz bloków, a w parametrach można definiować funkcje anonimowe. 
+Język posiada ułatwienia dla pracujących z liczbami, np. wyrażenia z efektami ubocznymi, oraz dodatki:
+- IntSwap, który pozwala zamienić wartości dwóch zmiennych
+- Flagi debugowania dla zmiennych oraz kontenerów, które pozwalają na śledzenie odpowiednio zmian i odczytów
+- Break i continue, a także ich wersje rozszerzone: break z parametrem n, który wychodzi od razu z n pętli na raz
+		oraz continue outer (n), które najpierw wychodzi z n pętli, a potem wykonuje continue.
+

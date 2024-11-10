@@ -1,0 +1,65 @@
+Język imperatywny, najlepiej w składni opartej o Pascala lub C.
+	
+	Na 5 punktów
+1	Jeden typ wartości, np. int.
+1	Zmienne, operacja przypisania.
+1	if.
+1	while lub goto.
+1	Wyrażenia z arytmetyką + - * / ( ).
+1	Porównania (dopuszczalne tylko w warunkach lub z interpretacją liczbową 0/1 jak w C).
+	
+	Wykonanie może polegać na wykonaniu ciągu instrukcji i wypisaniu stanu końcowego.
+	
+	Na 7 punktów
+	
+	J.w., a dodatkowo:
+	
+1	Funkcje lub procedury z parametrami przez wartość, rekurencja.
+	
+	Na 9 punktów
+1	Co najmniej dwa typy wartości w wyrażeniach: int i bool (to znaczy if 2+2 then _ parsuje się, ale wyrażenie ma niepoprawny typ).
+1	Arytmetyka, porównania.
+1	while, if (z else i bez, może być też składnia if _ elif _ else _ endif).
+1	Funkcje lub procedury (bez zagnieżdżania), rekurencja.
+1	Jawne wypisywanie wartości na wyjście (instrukcja lub wbudowana procedura print).
+	
+	Dwie wybrane rzeczy z poniższej listy lub coś o porównywalnej trudności:
+0	dwa sposoby przekazywania parametrów (przez zmienną / przez wartość),
+1	pętla for w stylu Pascala,
+0	typ string, literały napisowe, wbudowane funkcje pozwalające na rzutowanie między napisami a liczbami,
+1	wyrażenia z efektami ubocznymi (przypisania, operatory języka C ++, += itd).
+	
+	Na 12 punktów
+	
+	J.w., a ponadto:
+	
+1	Przesłanianie identyfikatorów ze statycznym ich wiązaniem (np. zmienne globalne i lokalne w funkcjach lub lokalne w blokach).
+1	Statyczne typowanie (tj. zawsze terminująca faza kontroli typów przed rozpoczęciem wykonania programu). 
+		(Wymaganie nie dotyczy nietrywialnych projektów, w których dynamiczne typowanie jest istotną cechą wybranego języka, np. Smalltalk, JavaScript).
+1	Jawnie obsłużone dynamiczne błędy wykonania, np. dzielenie przez zero.
+1	Funkcje zwracające wartość (tzn. nie tylko procedury; za to mogą być tylko funkcje – jak w C).
+	Dwie dodatkowe rzeczy z poniższej listy lub coś o porównywalnej trudności:
+	rekordy,
+1	tablice indeksowane int lub coś à la listy,
+1	tablice/słowniki indeksowane dowolnymi porównywalnymi wartościami; typ klucza należy uwzględnić w typie słownika,
+0	dowolnie zagnieżdżone krotki z przypisaniem jak w Pythonie (składnia wedle uznania),
+1	funkcje jako parametry,
+0	zwracanie funkcji w wyniku, domknięcia à la JavaScript.
+1	funkcje anonimowe (szczególnie sensowne w połączeniu z punktem e).
+	
+	Na 15 punktów
+	
+	J.w., a ponadto wymagane:
+	
+1	Dowolnie zagnieżdżone definicje funkcji / procedur z zachowaniem poprawności statycznego wiązania identyfikatorów (jak w Pascalu).
+	Jeszcze jedna-dwie funkcjonalności z listy powyżej.
+	
+	
+	
+	Dodatkowo:
+1	IntSwap  [1 pkt]
+1	Assignment debug + Read debug [2 pkt]
+1	Break z możliwością wyjścia z wielu pętli na raz, continue outer (n) [2 pkt]
+	
+	
+Podsumowanie: 15 punktów + 5 za dodatki

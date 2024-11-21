@@ -149,20 +149,21 @@ IContinue0. Instr1 ::= "continue";
 -- define ibreak = IBreak 1;
 -- define icontinue = IContinue 0;
 
--- grammar for defining, assigning variables and functions
-
+-- grammar for defining variables and functions
 -- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
 -- funcdef ::= FType FuncIdent (params) { I }
+
+_. Instr1 ::= Def;
+
+VarDef.        Def ::= Type VarIdent "=" Expr;
+FuncDef.       Def ::= FType FuncIdent "(" Params ")" "{" Instr "}";
+
+ArrDefInit.    Def ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def ::= "Array" Type ArrIdent "[" Expr "]";
+DictDef.       Def ::= "Dict" Type DictIdent;
+
+-- grammar for assigning variables
 -- varassign ::= x = e | x += e | x -= e | x *= e | x /= e | x %= e
-
-VarDef.        Instr1 ::= Type VarIdent "=" Expr;
-ArrDefInit.    Instr1 ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Instr1 ::= "Array" Type ArrIdent "[" Expr "]";
-ArrElSet.      Instr1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
-DictDef.       Instr1 ::= "Dict" Type DictIdent;
-DictElSet.     Instr1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
-
-FuncDef.       Instr1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
 
 VarAssign.         Instr1 ::= VarIdent "=" Expr;
 VarAssignPlus.     Instr1 ::= VarIdent "+=" Expr;
@@ -170,6 +171,9 @@ VarAssignMinus.    Instr1 ::= VarIdent "-=" Expr;
 VarAssignMul.      Instr1 ::= VarIdent "*=" Expr;
 VarAssignDiv.      Instr1 ::= VarIdent "/=" Expr;
 VarAssignMod.      Instr1 ::= VarIdent "%=" Expr;
+
+ArrElSet.      Instr1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
+DictElSet.     Instr1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
 
 -- grammar for debug instructions
 

@@ -117,10 +117,26 @@ Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 -- BNFC expressions for instructions (statements and definitions)
 -- I1; I2
 ISeq.      Instr ::= Instr1 ";" Instr; -- right associative, execution RtoL
-Stmt.      Instr1 ::= Stmt;
 Def.       Instr1 ::= Def;
+Stmt.      Instr1 ::= Stmt;
 
 _. Instr ::= Instr1;
+
+-- Grammar for defining variables and functions
+-- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
+-- funcdef ::= FType FuncIdent (params) { I }
+
+DefSeq.        Def  ::= Def1 ";" Def;
+VarDef.        Def1 ::= Type VarIdent "=" Expr;
+
+-- functions can also have local variables inside, so we allow declarations in the function body
+FuncDef.       Def1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
+
+ArrDefInit.    Def1 ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def1 ::= "Array" Type ArrIdent "[" Expr "]";
+DictDef.       Def1 ::= "Dict" Type DictIdent;
+
+_. Def ::= Def1;
 
 -- Grammar for statements
 -- S ::= skip | if (b) { S1 } else { S2 } | if (b) { S } | while (b) {S} | for (x = Ie1 to Ie2) { S }
@@ -129,62 +145,51 @@ _. Instr ::= Instr1;
 --            | d [e] set (e1) | a [e] = e1
 -- D ::= debug assignment enable x | debug assignment disable x | debug reading enable x | debug reading disable x
 
-SSkip.     Stmt ::= "skip";
+SSeq.      Stmt ::= Stmt1 ";" Stmt;
+SSkip.     Stmt1 ::= "skip";
 
 -- We use this to declare a general form of expression, but parse it
 -- differently.
-internal SIf. Stmt ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif1.       Stmt ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif2.       Stmt ::= "if" "(" Expr ")" "{" Stmt "}";
-SWhile.     Stmt ::= "while" "(" Expr ")" "{" Stmt "}";
-SFor.       Stmt ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Stmt "}";
+internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
+sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
+sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}";
+SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
+SFor.       Stmt1 ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Stmt "}";
 
 
 define sif1 b1 i1 i2 = SIf b1 i1 i2;
 define sif2 b1 i1  = SIf b1 i1 SSkip;
 
-SReturn.    Stmt ::= "return" "(" Expr ")";
-SPrint.     Stmt ::= "print" "(" Expr ")";
-SSwap.      Stmt ::= "swap" "(" VarIdent "," VarIdent ")";
-SBreak.     Stmt ::= "break" "(" Expr ")";
-SBreak1.    Stmt ::= "break";
-SContinue.  Stmt ::= "continue" "outer" "(" Expr ")";
-SContinue0. Stmt ::= "continue";
+SReturn.    Stmt1 ::= "return" "(" Expr ")";
+SPrint.     Stmt1 ::= "print" "(" Expr ")";
+SSwap.      Stmt1 ::= "swap" "(" VarIdent "," VarIdent ")";
+SBreak.     Stmt1 ::= "break" "(" Expr ")";
+SBreak1.    Stmt1 ::= "break";
+SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
+SContinue0. Stmt1 ::= "continue";
 
 -- Doesn't make sense
 -- define ibreak = IBreak 1;
 -- define icontinue = IContinue 0;
 
--- grammar for defining variables and functions
--- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
--- funcdef ::= FType FuncIdent (params) { I }
-
-
-VarDef.        Def ::= Type VarIdent "=" Expr;
-FuncDef.       Def ::= FType FuncIdent "(" Params ")" "{" Stmt "}";
-
-ArrDefInit.    Def ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def ::= "Array" Type ArrIdent "[" Expr "]";
-DictDef.       Def ::= "Dict" Type DictIdent;
-
 -- grammar for assigning variables
 -- varassign ::= x = e | x += e | x -= e | x *= e | x /= e | x %= e
 
-VarAssign.         Stmt ::= VarIdent "=" Expr;
-VarAssignPlus.     Stmt ::= VarIdent "+=" Expr;
-VarAssignMinus.    Stmt ::= VarIdent "-=" Expr;
-VarAssignMul.      Stmt ::= VarIdent "*=" Expr;
-VarAssignDiv.      Stmt ::= VarIdent "/=" Expr;
-VarAssignMod.      Stmt ::= VarIdent "%=" Expr;
+VarAssign.         Stmt1 ::= VarIdent "=" Expr;
+VarAssignPlus.     Stmt1 ::= VarIdent "+=" Expr;
+VarAssignMinus.    Stmt1 ::= VarIdent "-=" Expr;
+VarAssignMul.      Stmt1 ::= VarIdent "*=" Expr;
+VarAssignDiv.      Stmt1 ::= VarIdent "/=" Expr;
+VarAssignMod.      Stmt1 ::= VarIdent "%=" Expr;
 
-ArrElSet.      Stmt ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
-DictElSet.     Stmt ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
+ArrElSet.      Stmt1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
+DictElSet.     Stmt1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
 
 -- grammar for debug instructions
 
-DebugAssEnable.     Stmt ::= "debug" "assignment" "enable" VarIdent;      -- ;)
-DebugAssDisable.    Stmt ::= "debug" "assignment" "disable" VarIdent;
-DebugReadEnable.    Stmt ::= "debug" "reading" "enable" VarIdent;
-DebugReadDisable.   Stmt ::= "debug" "reading" "disable" VarIdent;
+DebugAssEnable.     Stmt1 ::= "debug" "assignment" "enable" VarIdent;      -- ;)
+DebugAssDisable.    Stmt1 ::= "debug" "assignment" "disable" VarIdent;
+DebugReadEnable.    Stmt1 ::= "debug" "reading" "enable" VarIdent;
+DebugReadDisable.   Stmt1 ::= "debug" "reading" "disable" VarIdent;
 
 -- --------------------------------------------------------------------------------------------- --

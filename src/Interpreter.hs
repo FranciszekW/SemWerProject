@@ -35,7 +35,7 @@ data SimpleType = TInt | TBool deriving (Show, Eq)
 -- Complex types (arrays and dictionaries)
 data ComplexType = TArray SimpleType | TDict SimpleType deriving (Show, Eq)
 
-data FuncParam = SType SimpleType | PFunc FuncType deriving (Show, Eq)
+data FuncParam = SType SimpleType Ident | PFunc FuncType Ident deriving (Show, Eq)
 
 -- Function types (can take functions as arguments, but return only simple types)
 data FuncType = TFunc [FuncParam] SimpleType deriving (Show, Eq)
@@ -351,6 +351,46 @@ iD (DictDef (TSimple stype) (Ident dict)) rhoF rhoV sto =
     let (loc, sto') = newloc sto in
     let rhoV' = mapSet rhoV dict loc in
         (rhoF, rhoV', setVarVal rhoV' sto' dict (ComplexVal (VDict Map.empty)))
+
+-- Now the most interesting part - functions. Functions can take simple values or other functions as arguments.
+-- They can also have local variables in them and make recursive calls. They return simple values.
+-- First we'll create a helper function to "prepare" the environments based on the parameters.
+-- Then a function to assign the arguments to the parameters in new environments.
+-- Then execute the function body.
+
+-- FuncParam can be either a simple type or a function type.
+prepareEnvs :: [FuncParam] -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
+
+prepareEnvs [] rhoV rhoF sto = (rhoV, rhoF, sto)
+
+prepareEnvs ((SType stype (Ident var)):params) rhoV rhoF sto =
+    let (loc, sto') = newloc sto in
+    let rhoV' = mapSet rhoV var loc in
+        prepareEnvs params rhoV' rhoF sto'
+
+-- Since lambda can be the only functional-argument in our language, we can create a dummy function
+-- for now and assign it to the parameter.
+prepareEnvs ((PFunc ftype (Ident func)):params) rhoV rhoF sto =
+    let (loc, sto') = newloc sto in
+    let rhoF' = mapSet rhoF func (\_ _ -> (sto', VInt 0)) in
+        prepareEnvs params rhoV rhoF' sto'
+
+-- We take each parameter and assign the corresponding argument to it. This function will be called
+-- after prepareEnvs, so we can assume that the environments are already prepared.
+assignArgs :: [FuncParam] -> [FuncArg] -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
+
+-- We iterate through the parameters and arguments at the same time, determine what type is the parameter,
+-- find it's location in the environment and assign the argument to it.
+
+assignArgs [] [] rhoV rhoF sto = (rhoV, rhoF, sto)
+
+assignArgs ((SType stype (Ident var)):params) ((SimpleArg val):args) rhoV rhoF sto =
+    let loc = mapGet rhoV var in
+    let sto' = setVarVal rhoV sto var (SimpleVal val) in
+        assignArgs params args rhoV rhoF sto'
+
+-- We need to override the dummy function which we assigned before with the actual function in the argument.
+assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
 
 
 

@@ -35,10 +35,12 @@ data SimpleType = TInt | TBool deriving (Show, Eq)
 -- Complex types (arrays and dictionaries)
 data ComplexType = TArray SimpleType | TDict SimpleType deriving (Show, Eq)
 
-data FuncParam = SType SimpleType Ident | PFunc FuncType Ident deriving (Show, Eq)
+data FuncParam = SType SimpleType Ident | PFunc FuncReturnType Ident deriving (Show, Eq)
 
 -- Function types (can take functions as arguments, but return only simple types)
 data FuncType = TFunc [FuncParam] SimpleType deriving (Show, Eq)
+
+data FuncReturnType = FTInt | FTBool deriving (Show, Eq)
 
 ------------------------------------------ DATATYPES ----------------------------------------------
 
@@ -98,40 +100,6 @@ setVarVal rhoV sto var val =
 
 ------------------------------------------ SEMANTICS ----------------------------------------------
 
-----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
-eA :: Args -> VEnv -> FEnv -> Store -> [FuncArg]
-
-{-
-ArgsVoid. Args ::= "void";
-ArgsOne.  Args ::= Expr;
-ArgsMany. Args ::= Expr "," Args;
-ArgsLambda. Args ::= Lambda;
-ArgsLambdaMany. Args ::= Lambda "," Args;
--}
-
-eA (ArgsVoid) rhoV rhoF sto = []
-eA (ArgsOne expr) rhoV rhoF sto = [SimpleArg (eE expr rhoV rhoF sto)]
-eA (ArgsMany expr args) rhoV rhoF sto = (SimpleArg (eE expr rhoV rhoF sto)) : (eA args rhoV rhoF sto)
--- TODO lambda evaluation
-eA (ArgsLambda lambda) rhoV rhoF sto = [FuncArg (eL lambda rhoV rhoF sto)]
-eA (ArgsLambdaMany lambda args) rhoV rhoF sto = (FuncArg (eL lambda rhoV rhoF sto)) : (eA args rhoV rhoF sto)
-
--- and parameters
-eP :: Params -> VEnv -> FEnv -> [FuncParam]
-
-{-
-ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= Type VarIdent;
-ParamFunc.       Params ::= FType FuncIdent;
-ParamVarMany.    Params ::= Type VarIdent "," Params;
-ParamFuncMany.   Params ::= FType FuncIdent "," Params;
--}
-
-eP (ParamsNone) rhoV rhoF = []
-eP (ParamVar (TSimple st) (Ident var)) rhoV rhoF = [SType st]
-eP (ParamFunc (TFunc fparams st) (Ident func)) rhoV rhoF = [PFunc (TFunc fparams st)]
-eP (ParamVarMany (TSimple st) (Ident var) params) rhoV rhoF = (SType st) : (eP params rhoV rhoF)
-eP (ParamFuncMany (TFunc fparams st) (Ident func) params) rhoV rhoF = (PFunc (TFunc fparams st)) : (eP params rhoV rhoF)
 
 -----------------------------------------EXPRESSIONS ----------------------------------------------
 -- Expressions can modify store too, because functions can be called.
@@ -307,7 +275,7 @@ iI (ISeq instr0 instr1) rhoV rhoF sto =
   let (rhoV', rhoF', sto') = iI instr0 rhoV rhoF sto in
     iI instr1 rhoV' rhoF' sto'
 
--------------------------------VARIABLE AND FUNCTION DEFINITIONS-----------------------------------
+-------------------------------VARIABLE DEFINITIONS------------------------------------------------
 -- Definitions also can modify everything.
 iD :: Def -> FEnv -> VEnv -> Store -> (FEnv, VEnv, Store)
 
@@ -352,6 +320,67 @@ iD (DictDef (TSimple stype) (Ident dict)) rhoF rhoV sto =
     let rhoV' = mapSet rhoV dict loc in
         (rhoF, rhoV', setVarVal rhoV' sto' dict (ComplexVal (VDict Map.empty)))
 
+iD (FuncDef ftype (Ident func) params instr) rhoF rhoV sto =
+    (mapSet rhoF func x, rhoV, sto) where
+        x args sto' =
+            let paramList = eP params in
+            let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
+            let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
+            let rhoF''' = mapSet rhoF func x in -- now recursion makes sense
+                iI instr rhoF''' rhoV'' sto'''
+
+----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
+eA :: Args -> VEnv -> FEnv -> Store -> (Store, [FuncArg])
+
+{-
+ArgsVoid. Args ::= "void";
+ArgsOne.  Args ::= Expr;
+ArgsMany. Args ::= Expr "," Args;
+ArgsLambda. Args ::= Lambda;
+ArgsLambdaMany. Args ::= Lambda "," Args;
+-}
+
+eA (ArgsVoid) rhoV rhoF sto = (sto, [])
+eA (ArgsOne expr) rhoV rhoF sto = (sto', [SimpleArg val]) where
+    (sto', val) = eE expr rhoV rhoF sto
+eA (ArgsMany expr args) rhoV rhoF sto = (sto'', (SimpleArg val) : args') where
+    (sto', val) = eE expr rhoV rhoF sto
+    (sto'', args') = eA args rhoV rhoF sto'
+eA (ArgsLambda lambda) rhoV rhoF sto = (sto, [FArg (eL lambda rhoV rhoF sto)])
+eA (ArgsLambdaMany lambda args) rhoV rhoF sto = (sto', (FArg (eL lambda rhoV rhoF sto)) : args') where
+    (sto', args') = eA args rhoV rhoF sto
+
+-- Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
+eL :: Lambda -> VEnv -> FEnv -> Store -> Func
+
+eL (Lam ftype params instr) rhoV rhoF sto =
+    x where
+        x args sto' =
+            let paramList = eP params in
+            let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
+            let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
+                iI instr rhoF'' rhoV'' sto''' -- recursion makes no sense in lambdas.
+
+-- Parameters
+eP :: Params -> [FuncParam]
+
+{-
+ParamsNone.      Params ::= "none";
+ParamVar.        Params ::= Type VarIdent;
+-- big decision here, in parameters we don't say exactly how the function looks like,
+-- we only specify what it returns.
+ParamFunc.       Params ::= FuncReturnType FuncIdent;
+ParamVarMany.    Params ::= Type VarIdent "," Params;
+ParamFuncMany.   Params ::= FuncReturnType FuncIdent "," Params;
+-}
+
+eP (ParamsNone) = []
+eP (ParamVar (TSimple stype) (Ident var)) = [SType stype (Ident var)]
+eP (ParamFunc ftype (Ident func)) = [PFunc ftype (Ident func)]
+eP (ParamVarMany (TSimple stype) (Ident var) params) = (SType stype (Ident var)) : eP params
+eP (ParamFuncMany ftype (Ident func) params) = (PFunc ftype (Ident func)) : eP params
+
+------------------------------------------ FUNCTION DEFINITIONS -----------------------------------
 -- Now the most interesting part - functions. Functions can take simple values or other functions as arguments.
 -- They can also have local variables in them and make recursive calls. They return simple values.
 -- First we'll create a helper function to "prepare" the environments based on the parameters.
@@ -377,11 +406,11 @@ prepareEnvs ((PFunc ftype (Ident func)):params) rhoV rhoF sto =
 
 -- We take each parameter and assign the corresponding argument to it. This function will be called
 -- after prepareEnvs, so we can assume that the environments are already prepared.
+-- NOTE: assignArgs does not modify the VEnv.
 assignArgs :: [FuncParam] -> [FuncArg] -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
 
 -- We iterate through the parameters and arguments at the same time, determine what type is the parameter,
 -- find it's location in the environment and assign the argument to it.
-
 assignArgs [] [] rhoV rhoF sto = (rhoV, rhoF, sto)
 
 assignArgs ((SType stype (Ident var)):params) ((SimpleArg val):args) rhoV rhoF sto =
@@ -391,7 +420,8 @@ assignArgs ((SType stype (Ident var)):params) ((SimpleArg val):args) rhoV rhoF s
 
 -- We need to override the dummy function which we assigned before with the actual function in the argument.
 assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
-
+    let rhoF' = mapSet rhoF func f in
+        assignArgs params args rhoV rhoF' sto
 
 
 

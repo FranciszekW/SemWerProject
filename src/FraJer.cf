@@ -5,7 +5,7 @@ in BNFC.
 
 -}
 
-entrypoints Instr ;
+entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, Type, FType, VarIdent, ArrIdent, DictIdent, FuncIdent;
 
 -- Syntax for comments
 comment "//" ;

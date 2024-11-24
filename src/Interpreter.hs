@@ -10,9 +10,9 @@ import Data.Map
 import qualified GHC.Integer (leInteger) 
 
 -- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( Type(..), FType(..), Ident(..), Expr(..), Args(..), Params(..), Instr(..), Def(..), Stmt(..) )
+import FraJer.Abs   ( Type(..), FType(..), Ident(..), Expr(..), Args(..), Params(..), Instr(..), Def(..), Stmt(..), Lambda(..) )
 import FraJer.Lex   ( Token, mkPosToken )
-import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, myLexer )
+import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
 import FraJer.Print ( Print, printTree )
 import FraJer.Skel  ()
 
@@ -27,9 +27,12 @@ mapHasKey map arg = member arg map
 
 ------------------------------------------ TYPES (sic!) -------------------------------------------
 
-data Type = TSimple SimpleType | TComplex ComplexType | TFunc FuncType deriving (Show, Eq)
+data Type = TSimple SimpleType | TComplex ComplexType | TFunction FuncType deriving (Show, Eq)
 
--- Simple types(int, bool)
+type TInt = FraJer.Abs.Type TInt
+type TBool = FraJer.Abs.Type TBool
+
+-- Simple types(int, bool) defined in the grammar (FraJer.abs)
 data SimpleType = TInt | TBool deriving (Show, Eq)
 
 -- Complex types (arrays and dictionaries)
@@ -40,7 +43,10 @@ data FuncParam = SType SimpleType Ident | PFunc FuncReturnType Ident deriving (S
 -- Function types (can take functions as arguments, but return only simple types)
 data FuncType = TFunc [FuncParam] SimpleType deriving (Show, Eq)
 
-data FuncReturnType = FTInt | FTBool deriving (Show, Eq)
+type IntFunc = FraJer.Abs.FType FTInt
+type BoolFunc = FraJer.Abs.FType FTBool
+
+data FuncReturnType = IntFunc | BoolFunc deriving (Show, Eq)
 
 ------------------------------------------ DATATYPES ----------------------------------------------
 
@@ -318,7 +324,7 @@ iD (ArrDef (TSimple stype) (Ident arr) exprSize) rhoF rhoV sto =
 iD (DictDef (TSimple stype) (Ident dict)) rhoF rhoV sto =
     let (loc, sto') = newloc sto in
     let rhoV' = mapSet rhoV dict loc in
-        (rhoF, rhoV', setVarVal rhoV' sto' dict (ComplexVal (VDict Map.empty)))
+        (rhoF, rhoV', setVarVal rhoV' sto' dict (ComplexVal (VDict empty)))
 
 iD (FuncDef ftype (Ident func) params instr) rhoF rhoV sto =
     (mapSet rhoF func x, rhoV, sto) where

@@ -32,8 +32,8 @@ Func. FuncIdent ::= Ident;
 
 -- BNFC Expressions for general expressions
 
-FuncVal.   Expr ::= FuncIdent "(" Args ")";
-VarVal.    Expr ::= VarIdent;
+FuncVal.   Expr2 ::= FuncIdent "(" Args ")";
+VarVal.    Expr2 ::= VarIdent;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -126,7 +126,6 @@ _. Instr ::= Instr1;
 -- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
 -- funcdef ::= FType FuncIdent (params) { I }
 
-DefSeq.        Def  ::= Def1 ";" Def;
 VarDef.        Def1 ::= Type VarIdent "=" Expr;
 
 -- functions can also have local variables inside, so we allow declarations in the function body
@@ -145,9 +144,6 @@ _. Def ::= Def1;
 --            | d [e] set (e1) | a [e] = e1
 -- D ::= debug assignment enable x | debug assignment disable x | debug reading enable x | debug reading disable x
 
-SSeq.      Stmt ::= Stmt1 ";" Stmt;
-SSkip.     Stmt1 ::= "skip";
-
 -- We use this to declare a general form of expression, but parse it
 -- differently.
 internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
@@ -160,6 +156,7 @@ SFor.       Stmt1 ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Stmt "}";
 define sif1 b1 i1 i2 = SIf b1 i1 i2;
 define sif2 b1 i1  = SIf b1 i1 SSkip;
 
+SSkip.      Stmt1 ::= "skip";
 SReturn.    Stmt1 ::= "return" "(" Expr ")";
 SPrint.     Stmt1 ::= "print" "(" Expr ")";
 SSwap.      Stmt1 ::= "swap" "(" VarIdent "," VarIdent ")";
@@ -191,5 +188,7 @@ DebugAssEnable.     Stmt1 ::= "debug" "assignment" "enable" VarIdent;      -- ;)
 DebugAssDisable.    Stmt1 ::= "debug" "assignment" "disable" VarIdent;
 DebugReadEnable.    Stmt1 ::= "debug" "reading" "enable" VarIdent;
 DebugReadDisable.   Stmt1 ::= "debug" "reading" "disable" VarIdent;
+
+_. Stmt ::= Stmt1;
 
 -- --------------------------------------------------------------------------------------------- --

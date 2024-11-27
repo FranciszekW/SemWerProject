@@ -5,7 +5,7 @@ in BNFC.
 
 -}
 
-entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, Type, FType, VarIdent, ArrIdent, DictIdent, FuncIdent;
+entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, SType, FType, VarIdent, ArrIdent, DictIdent, FuncIdent;
 
 -- Syntax for comments
 comment "//" ;
@@ -14,11 +14,11 @@ comment "/*" "*/" ;
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC Expressions for types and identifiers
--- T ::= int | bool
+-- ST ::= int | bool
 -- FT ::= Ifun | Bfun
 
-TInt.  Type ::= "Int";
-TBool. Type ::= "Bool";
+STInt.  SType ::= "Int";
+STBool. SType ::= "Bool";
 FTInt. FType ::= "IntFunc";
 FTBool. FType ::= "BoolFunc";
 
@@ -105,9 +105,9 @@ ArgsLambda. Args ::= Lambda;
 ArgsLambdaMany. Args ::= Lambda "," Args;
 
 ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= Type VarIdent;
+ParamVar.        Params ::= SType VarIdent;
 ParamFunc.       Params ::= FType FuncIdent;
-ParamVarMany.    Params ::= Type VarIdent "," Params;
+ParamVarMany.    Params ::= SType VarIdent "," Params;
 ParamFuncMany.   Params ::= FType FuncIdent "," Params;
 
 Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
@@ -126,14 +126,14 @@ _. Instr ::= Instr1;
 -- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
 -- funcdef ::= FType FuncIdent (params) { I }
 
-VarDef.        Def1 ::= Type VarIdent "=" Expr;
+VarDef.        Def1 ::= SType VarIdent "=" Expr;
 
 -- functions can also have local variables inside, so we allow declarations in the function body
 FuncDef.       Def1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
 
-ArrDefInit.    Def1 ::= "Array" Type ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def1 ::= "Array" Type ArrIdent "[" Expr "]";
-DictDef.       Def1 ::= "Dict" Type DictIdent;
+ArrDefInit.    Def1 ::= "Array" SType ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def1 ::= "Array" SType ArrIdent "[" Expr "]";
+DictDef.       Def1 ::= "Dict" SType DictIdent;
 
 _. Def ::= Def1;
 

@@ -139,127 +139,102 @@ instance Print Double where
 
 instance Print FraJer.Abs.Ident where
   prt _ (FraJer.Abs.Ident i) = doc $ showString i
-instance Print FraJer.Abs.Type where
+instance Print FraJer.Abs.SType where
   prt i = \case
-    FraJer.Abs.TInt -> prPrec i 0 (concatD [doc (showString "Int")])
-    FraJer.Abs.TBool -> prPrec i 0 (concatD [doc (showString "Bool")])
+    FraJer.Abs.STInt -> prPrec i 0 (concatD [doc (showString "Int")])
+    FraJer.Abs.STBool -> prPrec i 0 (concatD [doc (showString "Bool")])
 
 instance Print FraJer.Abs.FType where
   prt i = \case
     FraJer.Abs.FTInt -> prPrec i 0 (concatD [doc (showString "IntFunc")])
     FraJer.Abs.FTBool -> prPrec i 0 (concatD [doc (showString "BoolFunc")])
 
-instance Print FraJer.Abs.VarIdent where
-  prt i = \case
-    FraJer.Abs.Var id_ -> prPrec i 0 (concatD [prt 0 id_])
-
-instance Print FraJer.Abs.ArrIdent where
-  prt i = \case
-    FraJer.Abs.Arr id_ -> prPrec i 0 (concatD [prt 0 id_])
-
-instance Print FraJer.Abs.DictIdent where
-  prt i = \case
-    FraJer.Abs.Dict id_ -> prPrec i 0 (concatD [prt 0 id_])
-
-instance Print FraJer.Abs.FuncIdent where
-  prt i = \case
-    FraJer.Abs.Func id_ -> prPrec i 0 (concatD [prt 0 id_])
-
 instance Print FraJer.Abs.Expr where
   prt i = \case
-    FraJer.Abs.IE iexpr -> prPrec i 0 (concatD [prt 0 iexpr])
-    FraJer.Abs.BE bexpr -> prPrec i 0 (concatD [prt 0 bexpr])
-
-instance Print FraJer.Abs.IExpr where
-  prt i = \case
-    FraJer.Abs.EPlus iexpr1 iexpr2 -> prPrec i 0 (concatD [prt 0 iexpr1, doc (showString "+"), prt 1 iexpr2])
-    FraJer.Abs.EMinus iexpr1 iexpr2 -> prPrec i 0 (concatD [prt 0 iexpr1, doc (showString "-"), prt 1 iexpr2])
-    FraJer.Abs.EDiv iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 1 iexpr1, doc (showString "/"), prt 2 iexpr2])
-    FraJer.Abs.EMul iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 1 iexpr1, doc (showString "*"), prt 2 iexpr2])
-    FraJer.Abs.EMod iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 1 iexpr1, doc (showString "%"), prt 2 iexpr2])
+    FraJer.Abs.FuncVal id_ args -> prPrec i 2 (concatD [prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")")])
+    FraJer.Abs.VarVal id_ -> prPrec i 2 (concatD [prt 0 id_])
+    FraJer.Abs.EPlus expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "+"), prt 1 expr2])
+    FraJer.Abs.EMinus expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "-"), prt 1 expr2])
+    FraJer.Abs.EDiv expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "/"), prt 2 expr2])
+    FraJer.Abs.EMul expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "*"), prt 2 expr2])
+    FraJer.Abs.EMod expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "%"), prt 2 expr2])
     FraJer.Abs.ENum n -> prPrec i 2 (concatD [prt 0 n])
-    FraJer.Abs.EVar varident -> prPrec i 2 (concatD [prt 0 varident])
-    FraJer.Abs.EPostInc varident -> prPrec i 2 (concatD [prt 0 varident, doc (showString "++")])
-    FraJer.Abs.EPreInc varident -> prPrec i 2 (concatD [doc (showString "++"), prt 0 varident])
-    FraJer.Abs.EPostDec varident -> prPrec i 2 (concatD [prt 0 varident, doc (showString "--")])
-    FraJer.Abs.EPreDec varident -> prPrec i 2 (concatD [doc (showString "--"), prt 0 varident])
-    FraJer.Abs.EArray arrident iexpr -> prPrec i 2 (concatD [prt 0 arrident, doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.EDict dictident iexpr -> prPrec i 2 (concatD [prt 0 dictident, doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.EDictB dictident bexpr -> prPrec i 2 (concatD [prt 0 dictident, doc (showString "["), prt 0 bexpr, doc (showString "]")])
-    FraJer.Abs.EFuncVal funcident args -> prPrec i 2 (concatD [prt 0 funcident, doc (showString "("), prt 0 args, doc (showString ")")])
-
-instance Print FraJer.Abs.BExpr where
-  prt i = \case
-    FraJer.Abs.BTrue -> prPrec i 1 (concatD [doc (showString "true")])
-    FraJer.Abs.BFalse -> prPrec i 1 (concatD [doc (showString "false")])
-    FraJer.Abs.BVar varident -> prPrec i 1 (concatD [prt 0 varident])
-    FraJer.Abs.BEq iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString "=="), prt 0 iexpr2])
-    FraJer.Abs.BLeq iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString "<="), prt 0 iexpr2])
-    FraJer.Abs.BGeq iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString ">="), prt 0 iexpr2])
-    FraJer.Abs.BLt iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString "<"), prt 0 iexpr2])
-    FraJer.Abs.BGt iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString ">"), prt 0 iexpr2])
-    FraJer.Abs.BNeq iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 iexpr1, doc (showString "!="), prt 0 iexpr2])
-    FraJer.Abs.BEqB bexpr1 bexpr2 -> prPrec i 1 (concatD [prt 0 bexpr1, doc (showString "=="), prt 0 bexpr2])
-    FraJer.Abs.BNeqB bexpr1 bexpr2 -> prPrec i 1 (concatD [prt 0 bexpr1, doc (showString "!="), prt 0 bexpr2])
-    FraJer.Abs.BNot bexpr -> prPrec i 1 (concatD [doc (showString "!"), prt 1 bexpr])
-    FraJer.Abs.BOr bexpr1 bexpr2 -> prPrec i 1 (concatD [prt 0 bexpr1, doc (showString "or"), prt 1 bexpr2])
-    FraJer.Abs.BAnd bexpr1 bexpr2 -> prPrec i 1 (concatD [prt 0 bexpr1, doc (showString "and"), prt 1 bexpr2])
-    FraJer.Abs.BXor bexpr1 bexpr2 -> prPrec i 1 (concatD [prt 0 bexpr1, doc (showString "xor"), prt 1 bexpr2])
-    FraJer.Abs.BArray arrident iexpr -> prPrec i 1 (concatD [prt 0 arrident, doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.BDict dictident iexpr -> prPrec i 1 (concatD [prt 0 dictident, doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.BDictB dictident bexpr -> prPrec i 1 (concatD [prt 0 dictident, doc (showString "["), prt 0 bexpr, doc (showString "]")])
-    FraJer.Abs.BDictHasKey dictident iexpr -> prPrec i 1 (concatD [prt 0 dictident, doc (showString "has"), doc (showString "key"), doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.BDictHasKeyB dictident bexpr -> prPrec i 1 (concatD [prt 0 dictident, doc (showString "has"), doc (showString "key"), doc (showString "["), prt 0 bexpr, doc (showString "]")])
-    FraJer.Abs.BFuncVal funcident args -> prPrec i 1 (concatD [prt 0 funcident, doc (showString "("), prt 0 args, doc (showString ")")])
+    FraJer.Abs.EPostInc id_ -> prPrec i 2 (concatD [prt 0 id_, doc (showString "++")])
+    FraJer.Abs.EPreInc id_ -> prPrec i 2 (concatD [doc (showString "++"), prt 0 id_])
+    FraJer.Abs.EPostDec id_ -> prPrec i 2 (concatD [prt 0 id_, doc (showString "--")])
+    FraJer.Abs.EPreDec id_ -> prPrec i 2 (concatD [doc (showString "--"), prt 0 id_])
+    FraJer.Abs.EArray id_ expr -> prPrec i 2 (concatD [prt 0 id_, doc (showString "["), prt 0 expr, doc (showString "]")])
+    FraJer.Abs.EDict id_ expr -> prPrec i 2 (concatD [prt 0 id_, doc (showString "get"), doc (showString "["), prt 0 expr, doc (showString "]")])
+    FraJer.Abs.BTrue -> prPrec i 2 (concatD [doc (showString "true")])
+    FraJer.Abs.BFalse -> prPrec i 2 (concatD [doc (showString "false")])
+    FraJer.Abs.EEq expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "=="), prt 2 expr2])
+    FraJer.Abs.ELeq expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "<="), prt 2 expr2])
+    FraJer.Abs.EGeq expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString ">="), prt 2 expr2])
+    FraJer.Abs.ELt expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "<"), prt 2 expr2])
+    FraJer.Abs.EGt expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString ">"), prt 2 expr2])
+    FraJer.Abs.ENeq expr1 expr2 -> prPrec i 1 (concatD [prt 1 expr1, doc (showString "!="), prt 2 expr2])
+    FraJer.Abs.BNot expr -> prPrec i 2 (concatD [doc (showString "!"), prt 2 expr])
+    FraJer.Abs.BOr expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "or"), prt 1 expr2])
+    FraJer.Abs.BAnd expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "and"), prt 1 expr2])
+    FraJer.Abs.BXor expr1 expr2 -> prPrec i 0 (concatD [prt 0 expr1, doc (showString "xor"), prt 1 expr2])
+    FraJer.Abs.BDictHasKey id_ expr -> prPrec i 2 (concatD [prt 0 id_, doc (showString "has"), doc (showString "key"), doc (showString "["), prt 0 expr, doc (showString "]")])
 
 instance Print FraJer.Abs.Args where
   prt i = \case
-    FraJer.Abs.ArgsNone -> prPrec i 0 (concatD [doc (showString "none")])
+    FraJer.Abs.ArgsVoid -> prPrec i 0 (concatD [doc (showString "void")])
     FraJer.Abs.ArgsOne expr -> prPrec i 0 (concatD [prt 0 expr])
     FraJer.Abs.ArgsMany expr args -> prPrec i 0 (concatD [prt 0 expr, doc (showString ","), prt 0 args])
+    FraJer.Abs.ArgsLambda lambda -> prPrec i 0 (concatD [prt 0 lambda])
+    FraJer.Abs.ArgsLambdaMany lambda args -> prPrec i 0 (concatD [prt 0 lambda, doc (showString ","), prt 0 args])
+
+instance Print FraJer.Abs.Params where
+  prt i = \case
+    FraJer.Abs.ParamsNone -> prPrec i 0 (concatD [doc (showString "none")])
+    FraJer.Abs.ParamVar stype id_ -> prPrec i 0 (concatD [prt 0 stype, prt 0 id_])
+    FraJer.Abs.ParamFunc ftype id_ -> prPrec i 0 (concatD [prt 0 ftype, prt 0 id_])
+    FraJer.Abs.ParamVarMany stype id_ params -> prPrec i 0 (concatD [prt 0 stype, prt 0 id_, doc (showString ","), prt 0 params])
+    FraJer.Abs.ParamFuncMany ftype id_ params -> prPrec i 0 (concatD [prt 0 ftype, prt 0 id_, doc (showString ","), prt 0 params])
 
 instance Print FraJer.Abs.Lambda where
   prt i = \case
     FraJer.Abs.Lam ftype params instr -> prPrec i 0 (concatD [prt 0 ftype, doc (showString "lambda"), doc (showString "("), prt 0 params, doc (showString ")"), doc (showString "->"), doc (showString "{"), prt 0 instr, doc (showString "}")])
 
-instance Print FraJer.Abs.Params where
-  prt i = \case
-    FraJer.Abs.ParamsNone -> prPrec i 0 (concatD [doc (showString "none")])
-    FraJer.Abs.ParamVar varident type_ -> prPrec i 0 (concatD [prt 0 varident, doc (showString ":"), prt 0 type_])
-    FraJer.Abs.ParamFunc funcident ftype -> prPrec i 0 (concatD [prt 0 funcident, doc (showString ":"), prt 0 ftype])
-    FraJer.Abs.ParamLambda lambda -> prPrec i 0 (concatD [prt 0 lambda])
-    FraJer.Abs.ParamVarMany varident type_ params -> prPrec i 0 (concatD [prt 0 varident, doc (showString ":"), prt 0 type_, doc (showString ","), prt 0 params])
-    FraJer.Abs.ParamFuncMany funcident ftype params -> prPrec i 0 (concatD [prt 0 funcident, doc (showString ":"), prt 0 ftype, doc (showString ","), prt 0 params])
-    FraJer.Abs.ParamLambdaMany lambda params -> prPrec i 0 (concatD [prt 0 lambda, doc (showString ","), prt 0 params])
-
 instance Print FraJer.Abs.Instr where
   prt i = \case
-    FraJer.Abs.ISkip -> prPrec i 1 (concatD [doc (showString "skip")])
     FraJer.Abs.ISeq instr1 instr2 -> prPrec i 0 (concatD [prt 1 instr1, doc (showString ";"), prt 0 instr2])
-    FraJer.Abs.IIf bexpr instr1 instr2 -> prPrec i 1 (concatD [doc (showString "if"), doc (showString "("), prt 0 bexpr, doc (showString ")"), doc (showString "{"), prt 0 instr1, doc (showString "}"), doc (showString "else"), doc (showString "{"), prt 0 instr2, doc (showString "}")])
-    FraJer.Abs.IWhile bexpr instr -> prPrec i 1 (concatD [doc (showString "while"), doc (showString "("), prt 0 bexpr, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
-    FraJer.Abs.IFor varident iexpr1 iexpr2 instr -> prPrec i 1 (concatD [doc (showString "for"), doc (showString "("), prt 0 varident, doc (showString "="), prt 0 iexpr1, doc (showString "to"), prt 0 iexpr2, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
-    FraJer.Abs.IReturn iexpr -> prPrec i 1 (concatD [doc (showString "return"), doc (showString "("), prt 0 iexpr, doc (showString ")")])
-    FraJer.Abs.IPrint iexpr -> prPrec i 1 (concatD [doc (showString "print"), doc (showString "("), prt 0 iexpr, doc (showString ")")])
-    FraJer.Abs.ISwap varident1 varident2 -> prPrec i 1 (concatD [doc (showString "swap"), doc (showString "("), prt 0 varident1, doc (showString ","), prt 0 varident2, doc (showString ")")])
-    FraJer.Abs.IBreak iexpr -> prPrec i 1 (concatD [doc (showString "break"), doc (showString "("), prt 0 iexpr, doc (showString ")")])
-    FraJer.Abs.IBreak1 -> prPrec i 1 (concatD [doc (showString "break")])
-    FraJer.Abs.IContinue iexpr -> prPrec i 1 (concatD [doc (showString "continue"), doc (showString "outer"), doc (showString "("), prt 0 iexpr, doc (showString ")")])
-    FraJer.Abs.IContinue0 -> prPrec i 1 (concatD [doc (showString "continue")])
-    FraJer.Abs.VarDef type_ varident expr -> prPrec i 1 (concatD [prt 0 type_, prt 0 varident, doc (showString "="), prt 0 expr])
-    FraJer.Abs.ArrDefInit type_ arrident iexpr expr -> prPrec i 1 (concatD [doc (showString "Array"), prt 0 type_, prt 0 arrident, doc (showString "["), prt 0 iexpr, doc (showString "]"), doc (showString "("), prt 0 expr, doc (showString ")")])
-    FraJer.Abs.ArrDef type_ arrident iexpr -> prPrec i 1 (concatD [doc (showString "Array"), prt 0 type_, prt 0 arrident, doc (showString "["), prt 0 iexpr, doc (showString "]")])
-    FraJer.Abs.ArrElSet arrident iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 arrident, doc (showString "["), prt 0 iexpr1, doc (showString "]"), doc (showString "="), doc (showString "("), prt 0 iexpr2, doc (showString ")")])
-    FraJer.Abs.DictDef type_ dictident -> prPrec i 1 (concatD [doc (showString "Dict"), prt 0 type_, prt 0 dictident])
-    FraJer.Abs.DictElSet dictident iexpr1 iexpr2 -> prPrec i 1 (concatD [prt 0 dictident, doc (showString "["), prt 0 iexpr1, doc (showString "]"), doc (showString "set"), doc (showString "("), prt 0 iexpr2, doc (showString ")")])
-    FraJer.Abs.FuncDef ftype funcident params instr -> prPrec i 1 (concatD [prt 0 ftype, prt 0 funcident, doc (showString "("), prt 0 params, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
-    FraJer.Abs.VarAssign varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "="), prt 0 iexpr])
-    FraJer.Abs.VarAssignPlus varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "+="), prt 0 iexpr])
-    FraJer.Abs.VarAssignMinus varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "-="), prt 0 iexpr])
-    FraJer.Abs.VarAssignMul varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "*="), prt 0 iexpr])
-    FraJer.Abs.VarAssignDiv varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "/="), prt 0 iexpr])
-    FraJer.Abs.VarAssignMod varident iexpr -> prPrec i 1 (concatD [prt 0 varident, doc (showString "%="), prt 0 iexpr])
-    FraJer.Abs.DebugAssEnable varident -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "enable"), prt 0 varident])
-    FraJer.Abs.DebugAssDisable varident -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "disable"), prt 0 varident])
-    FraJer.Abs.DebugReadEnable varident -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "enable"), prt 0 varident])
-    FraJer.Abs.DebugReadDisable varident -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "disable"), prt 0 varident])
+    FraJer.Abs.Def def -> prPrec i 1 (concatD [prt 0 def])
+    FraJer.Abs.Stmt stmt -> prPrec i 1 (concatD [prt 0 stmt])
+
+instance Print FraJer.Abs.Def where
+  prt i = \case
+    FraJer.Abs.VarDef stype id_ expr -> prPrec i 1 (concatD [prt 0 stype, prt 0 id_, doc (showString "="), prt 0 expr])
+    FraJer.Abs.FuncDef ftype id_ params instr -> prPrec i 1 (concatD [prt 0 ftype, prt 0 id_, doc (showString "("), prt 0 params, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
+    FraJer.Abs.ArrDefInit stype id_ expr1 expr2 -> prPrec i 1 (concatD [doc (showString "Array"), prt 0 stype, prt 0 id_, doc (showString "["), prt 0 expr1, doc (showString "]"), doc (showString "("), prt 0 expr2, doc (showString ")")])
+    FraJer.Abs.ArrDef stype id_ expr -> prPrec i 1 (concatD [doc (showString "Array"), prt 0 stype, prt 0 id_, doc (showString "["), prt 0 expr, doc (showString "]")])
+    FraJer.Abs.DictDef stype id_ -> prPrec i 1 (concatD [doc (showString "Dict"), prt 0 stype, prt 0 id_])
+
+instance Print FraJer.Abs.Stmt where
+  prt i = \case
+    FraJer.Abs.SIf expr stmt1 stmt2 -> prPrec i 1 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt1, doc (showString "}"), doc (showString "else"), doc (showString "{"), prt 0 stmt2, doc (showString "}")])
+    FraJer.Abs.SWhile expr stmt -> prPrec i 1 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
+    FraJer.Abs.SFor id_ expr1 expr2 stmt -> prPrec i 1 (concatD [doc (showString "for"), doc (showString "("), prt 0 id_, doc (showString "="), prt 0 expr1, doc (showString "to"), prt 0 expr2, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
+    FraJer.Abs.SSkip -> prPrec i 1 (concatD [doc (showString "skip")])
+    FraJer.Abs.SReturn expr -> prPrec i 1 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    FraJer.Abs.SPrint expr -> prPrec i 1 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    FraJer.Abs.SSwap id_1 id_2 -> prPrec i 1 (concatD [doc (showString "swap"), doc (showString "("), prt 0 id_1, doc (showString ","), prt 0 id_2, doc (showString ")")])
+    FraJer.Abs.SBreak expr -> prPrec i 1 (concatD [doc (showString "break"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    FraJer.Abs.SBreak1 -> prPrec i 1 (concatD [doc (showString "break")])
+    FraJer.Abs.SContinue expr -> prPrec i 1 (concatD [doc (showString "continue"), doc (showString "outer"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    FraJer.Abs.SContinue0 -> prPrec i 1 (concatD [doc (showString "continue")])
+    FraJer.Abs.VarAssign id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "="), prt 0 expr])
+    FraJer.Abs.VarAssignPlus id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "+="), prt 0 expr])
+    FraJer.Abs.VarAssignMinus id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "-="), prt 0 expr])
+    FraJer.Abs.VarAssignMul id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "*="), prt 0 expr])
+    FraJer.Abs.VarAssignDiv id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "/="), prt 0 expr])
+    FraJer.Abs.VarAssignMod id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "%="), prt 0 expr])
+    FraJer.Abs.ArrElSet id_ expr1 expr2 -> prPrec i 1 (concatD [prt 0 id_, doc (showString "["), prt 0 expr1, doc (showString "]"), doc (showString "="), doc (showString "("), prt 0 expr2, doc (showString ")")])
+    FraJer.Abs.DictElSet id_ expr1 expr2 -> prPrec i 1 (concatD [prt 0 id_, doc (showString "set"), doc (showString "["), prt 0 expr1, doc (showString "]"), doc (showString "to"), doc (showString "("), prt 0 expr2, doc (showString ")")])
+    FraJer.Abs.DebugAssEnable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "enable"), prt 0 id_])
+    FraJer.Abs.DebugAssDisable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "disable"), prt 0 id_])
+    FraJer.Abs.DebugReadEnable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "enable"), prt 0 id_])
+    FraJer.Abs.DebugReadDisable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "disable"), prt 0 id_])

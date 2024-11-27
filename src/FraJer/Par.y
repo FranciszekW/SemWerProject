@@ -8,23 +8,15 @@
 module FraJer.Par
   ( happyError
   , myLexer
-  , pType
-  , pFType
-  , pVarIdent
-  , pArrIdent
-  , pDictIdent
-  , pFuncIdent
+  , pInstr
   , pExpr
-  , pIExpr
-  , pIExpr1
-  , pIExpr2
-  , pBExpr1
-  , pBExpr
+  , pStmt
+  , pDef
+  , pParams
   , pArgs
   , pLambda
-  , pParams
-  , pInstr1
-  , pInstr
+  , pSType
+  , pFType
   ) where
 
 import Prelude
@@ -34,23 +26,15 @@ import FraJer.Lex
 
 }
 
-%name pType Type
-%name pFType FType
-%name pVarIdent VarIdent
-%name pArrIdent ArrIdent
-%name pDictIdent DictIdent
-%name pFuncIdent FuncIdent
+%name pInstr Instr
 %name pExpr Expr
-%name pIExpr IExpr
-%name pIExpr1 IExpr1
-%name pIExpr2 IExpr2
-%name pBExpr1 BExpr1
-%name pBExpr BExpr
+%name pStmt Stmt
+%name pDef Def
+%name pParams Params
 %name pArgs Args
 %name pLambda Lambda
-%name pParams Params
-%name pInstr1 Instr1
-%name pInstr Instr
+%name pSType SType
+%name pFType FType
 -- no lexer declaration
 %monad { Err } { (>>=) } { return }
 %tokentype {Token}
@@ -73,32 +57,32 @@ import FraJer.Lex
   '->'         { PT _ (TS _ 16) }
   '/'          { PT _ (TS _ 17) }
   '/='         { PT _ (TS _ 18) }
-  ':'          { PT _ (TS _ 19) }
-  ';'          { PT _ (TS _ 20) }
-  '<'          { PT _ (TS _ 21) }
-  '<='         { PT _ (TS _ 22) }
-  '='          { PT _ (TS _ 23) }
-  '=='         { PT _ (TS _ 24) }
-  '>'          { PT _ (TS _ 25) }
-  '>='         { PT _ (TS _ 26) }
-  'Array'      { PT _ (TS _ 27) }
-  'Bool'       { PT _ (TS _ 28) }
-  'BoolFunc'   { PT _ (TS _ 29) }
-  'Dict'       { PT _ (TS _ 30) }
-  'Int'        { PT _ (TS _ 31) }
-  'IntFunc'    { PT _ (TS _ 32) }
-  '['          { PT _ (TS _ 33) }
-  ']'          { PT _ (TS _ 34) }
-  'and'        { PT _ (TS _ 35) }
-  'assignment' { PT _ (TS _ 36) }
-  'break'      { PT _ (TS _ 37) }
-  'continue'   { PT _ (TS _ 38) }
-  'debug'      { PT _ (TS _ 39) }
-  'disable'    { PT _ (TS _ 40) }
-  'else'       { PT _ (TS _ 41) }
-  'enable'     { PT _ (TS _ 42) }
-  'false'      { PT _ (TS _ 43) }
-  'for'        { PT _ (TS _ 44) }
+  ';'          { PT _ (TS _ 19) }
+  '<'          { PT _ (TS _ 20) }
+  '<='         { PT _ (TS _ 21) }
+  '='          { PT _ (TS _ 22) }
+  '=='         { PT _ (TS _ 23) }
+  '>'          { PT _ (TS _ 24) }
+  '>='         { PT _ (TS _ 25) }
+  'Array'      { PT _ (TS _ 26) }
+  'Bool'       { PT _ (TS _ 27) }
+  'BoolFunc'   { PT _ (TS _ 28) }
+  'Dict'       { PT _ (TS _ 29) }
+  'Int'        { PT _ (TS _ 30) }
+  'IntFunc'    { PT _ (TS _ 31) }
+  '['          { PT _ (TS _ 32) }
+  ']'          { PT _ (TS _ 33) }
+  'and'        { PT _ (TS _ 34) }
+  'assignment' { PT _ (TS _ 35) }
+  'break'      { PT _ (TS _ 36) }
+  'continue'   { PT _ (TS _ 37) }
+  'debug'      { PT _ (TS _ 38) }
+  'disable'    { PT _ (TS _ 39) }
+  'else'       { PT _ (TS _ 40) }
+  'enable'     { PT _ (TS _ 41) }
+  'false'      { PT _ (TS _ 42) }
+  'for'        { PT _ (TS _ 43) }
+  'get'        { PT _ (TS _ 44) }
   'has'        { PT _ (TS _ 45) }
   'if'         { PT _ (TS _ 46) }
   'key'        { PT _ (TS _ 47) }
@@ -114,10 +98,11 @@ import FraJer.Lex
   'swap'       { PT _ (TS _ 57) }
   'to'         { PT _ (TS _ 58) }
   'true'       { PT _ (TS _ 59) }
-  'while'      { PT _ (TS _ 60) }
-  'xor'        { PT _ (TS _ 61) }
-  '{'          { PT _ (TS _ 62) }
-  '}'          { PT _ (TS _ 63) }
+  'void'       { PT _ (TS _ 60) }
+  'while'      { PT _ (TS _ 61) }
+  'xor'        { PT _ (TS _ 62) }
+  '{'          { PT _ (TS _ 63) }
+  '}'          { PT _ (TS _ 64) }
   L_Ident      { PT _ (TV $$)   }
   L_integ      { PT _ (TI $$)   }
 
@@ -129,137 +114,118 @@ Ident  : L_Ident { FraJer.Abs.Ident $1 }
 Integer :: { Integer }
 Integer  : L_integ  { (read $1) :: Integer }
 
-Type :: { FraJer.Abs.Type }
-Type : 'Int' { FraJer.Abs.TInt } | 'Bool' { FraJer.Abs.TBool }
+SType :: { FraJer.Abs.SType }
+SType : 'Int' { FraJer.Abs.STInt } | 'Bool' { FraJer.Abs.STBool }
 
 FType :: { FraJer.Abs.FType }
 FType
   : 'IntFunc' { FraJer.Abs.FTInt } | 'BoolFunc' { FraJer.Abs.FTBool }
 
-VarIdent :: { FraJer.Abs.VarIdent }
-VarIdent : Ident { FraJer.Abs.Var $1 }
-
-ArrIdent :: { FraJer.Abs.ArrIdent }
-ArrIdent : Ident { FraJer.Abs.Arr $1 }
-
-DictIdent :: { FraJer.Abs.DictIdent }
-DictIdent : Ident { FraJer.Abs.Dict $1 }
-
-FuncIdent :: { FraJer.Abs.FuncIdent }
-FuncIdent : Ident { FraJer.Abs.Func $1 }
+Expr2 :: { FraJer.Abs.Expr }
+Expr2
+  : Ident '(' Args ')' { FraJer.Abs.FuncVal $1 $3 }
+  | Ident { FraJer.Abs.VarVal $1 }
+  | Integer { FraJer.Abs.ENum $1 }
+  | Ident '++' { FraJer.Abs.EPostInc $1 }
+  | '++' Ident { FraJer.Abs.EPreInc $2 }
+  | Ident '--' { FraJer.Abs.EPostDec $1 }
+  | '--' Ident { FraJer.Abs.EPreDec $2 }
+  | Ident '[' Expr ']' { FraJer.Abs.EArray $1 $3 }
+  | Ident 'get' '[' Expr ']' { FraJer.Abs.EDict $1 $4 }
+  | '(' Expr ')' { $2 }
+  | 'true' { FraJer.Abs.BTrue }
+  | 'false' { FraJer.Abs.BFalse }
+  | '!' Expr2 { FraJer.Abs.BNot $2 }
+  | Ident 'has' 'key' '[' Expr ']' { FraJer.Abs.BDictHasKey $1 $5 }
 
 Expr :: { FraJer.Abs.Expr }
-Expr : IExpr { FraJer.Abs.IE $1 } | BExpr { FraJer.Abs.BE $1 }
+Expr
+  : Expr '+' Expr1 { FraJer.Abs.EPlus $1 $3 }
+  | Expr '-' Expr1 { FraJer.Abs.EMinus $1 $3 }
+  | Expr1 { $1 }
+  | Expr 'or' Expr1 { FraJer.Abs.BOr $1 $3 }
+  | Expr 'and' Expr1 { FraJer.Abs.BAnd $1 $3 }
+  | Expr 'xor' Expr1 { FraJer.Abs.BXor $1 $3 }
 
-IExpr :: { FraJer.Abs.IExpr }
-IExpr
-  : IExpr '+' IExpr1 { FraJer.Abs.EPlus $1 $3 }
-  | IExpr '-' IExpr1 { FraJer.Abs.EMinus $1 $3 }
-  | IExpr1 { $1 }
-
-IExpr1 :: { FraJer.Abs.IExpr }
-IExpr1
-  : IExpr1 '/' IExpr2 { FraJer.Abs.EDiv $1 $3 }
-  | IExpr1 '*' IExpr2 { FraJer.Abs.EMul $1 $3 }
-  | IExpr1 '%' IExpr2 { FraJer.Abs.EMod $1 $3 }
-  | IExpr2 { $1 }
-
-IExpr2 :: { FraJer.Abs.IExpr }
-IExpr2
-  : Integer { FraJer.Abs.ENum $1 }
-  | VarIdent { FraJer.Abs.EVar $1 }
-  | VarIdent '++' { FraJer.Abs.EPostInc $1 }
-  | '++' VarIdent { FraJer.Abs.EPreInc $2 }
-  | VarIdent '--' { FraJer.Abs.EPostDec $1 }
-  | '--' VarIdent { FraJer.Abs.EPreDec $2 }
-  | ArrIdent '[' IExpr ']' { FraJer.Abs.EArray $1 $3 }
-  | DictIdent '[' IExpr ']' { FraJer.Abs.EDict $1 $3 }
-  | DictIdent '[' BExpr ']' { FraJer.Abs.EDictB $1 $3 }
-  | FuncIdent '(' Args ')' { FraJer.Abs.EFuncVal $1 $3 }
-  | '(' IExpr ')' { $2 }
-
-BExpr1 :: { FraJer.Abs.BExpr }
-BExpr1
-  : 'true' { FraJer.Abs.BTrue }
-  | 'false' { FraJer.Abs.BFalse }
-  | VarIdent { FraJer.Abs.BVar $1 }
-  | IExpr '==' IExpr { FraJer.Abs.BEq $1 $3 }
-  | IExpr '<=' IExpr { FraJer.Abs.BLeq $1 $3 }
-  | IExpr '>=' IExpr { FraJer.Abs.BGeq $1 $3 }
-  | IExpr '<' IExpr { FraJer.Abs.BLt $1 $3 }
-  | IExpr '>' IExpr { FraJer.Abs.BGt $1 $3 }
-  | IExpr '!=' IExpr { FraJer.Abs.BNeq $1 $3 }
-  | BExpr '==' BExpr { FraJer.Abs.BEqB $1 $3 }
-  | BExpr '!=' BExpr { FraJer.Abs.BNeqB $1 $3 }
-  | '!' BExpr1 { FraJer.Abs.BNot $2 }
-  | BExpr 'or' BExpr1 { FraJer.Abs.BOr $1 $3 }
-  | BExpr 'and' BExpr1 { FraJer.Abs.BAnd $1 $3 }
-  | BExpr 'xor' BExpr1 { FraJer.Abs.BXor $1 $3 }
-  | ArrIdent '[' IExpr ']' { FraJer.Abs.BArray $1 $3 }
-  | DictIdent '[' IExpr ']' { FraJer.Abs.BDict $1 $3 }
-  | DictIdent '[' BExpr ']' { FraJer.Abs.BDictB $1 $3 }
-  | DictIdent 'has' 'key' '[' IExpr ']' { FraJer.Abs.BDictHasKey $1 $5 }
-  | DictIdent 'has' 'key' '[' BExpr ']' { FraJer.Abs.BDictHasKeyB $1 $5 }
-  | FuncIdent '(' Args ')' { FraJer.Abs.BFuncVal $1 $3 }
-  | '(' BExpr ')' { $2 }
-
-BExpr :: { FraJer.Abs.BExpr }
-BExpr : BExpr1 { $1 }
+Expr1 :: { FraJer.Abs.Expr }
+Expr1
+  : Expr1 '/' Expr2 { FraJer.Abs.EDiv $1 $3 }
+  | Expr1 '*' Expr2 { FraJer.Abs.EMul $1 $3 }
+  | Expr1 '%' Expr2 { FraJer.Abs.EMod $1 $3 }
+  | Expr2 { $1 }
+  | Expr1 '==' Expr2 { FraJer.Abs.EEq $1 $3 }
+  | Expr1 '<=' Expr2 { FraJer.Abs.ELeq $1 $3 }
+  | Expr1 '>=' Expr2 { FraJer.Abs.EGeq $1 $3 }
+  | Expr1 '<' Expr2 { FraJer.Abs.ELt $1 $3 }
+  | Expr1 '>' Expr2 { FraJer.Abs.EGt $1 $3 }
+  | Expr1 '!=' Expr2 { FraJer.Abs.ENeq $1 $3 }
 
 Args :: { FraJer.Abs.Args }
 Args
-  : 'none' { FraJer.Abs.ArgsNone }
+  : 'void' { FraJer.Abs.ArgsVoid }
   | Expr { FraJer.Abs.ArgsOne $1 }
   | Expr ',' Args { FraJer.Abs.ArgsMany $1 $3 }
+  | Lambda { FraJer.Abs.ArgsLambda $1 }
+  | Lambda ',' Args { FraJer.Abs.ArgsLambdaMany $1 $3 }
+
+Params :: { FraJer.Abs.Params }
+Params
+  : 'none' { FraJer.Abs.ParamsNone }
+  | SType Ident { FraJer.Abs.ParamVar $1 $2 }
+  | FType Ident { FraJer.Abs.ParamFunc $1 $2 }
+  | SType Ident ',' Params { FraJer.Abs.ParamVarMany $1 $2 $4 }
+  | FType Ident ',' Params { FraJer.Abs.ParamFuncMany $1 $2 $4 }
 
 Lambda :: { FraJer.Abs.Lambda }
 Lambda
   : FType 'lambda' '(' Params ')' '->' '{' Instr '}' { FraJer.Abs.Lam $1 $4 $8 }
 
-Params :: { FraJer.Abs.Params }
-Params
-  : 'none' { FraJer.Abs.ParamsNone }
-  | VarIdent ':' Type { FraJer.Abs.ParamVar $1 $3 }
-  | FuncIdent ':' FType { FraJer.Abs.ParamFunc $1 $3 }
-  | Lambda { FraJer.Abs.ParamLambda $1 }
-  | VarIdent ':' Type ',' Params { FraJer.Abs.ParamVarMany $1 $3 $5 }
-  | FuncIdent ':' FType ',' Params { FraJer.Abs.ParamFuncMany $1 $3 $5 }
-  | Lambda ',' Params { FraJer.Abs.ParamLambdaMany $1 $3 }
-
-Instr1 :: { FraJer.Abs.Instr }
-Instr1
-  : 'skip' { FraJer.Abs.ISkip }
-  | 'if' '(' BExpr ')' '{' Instr '}' 'else' '{' Instr '}' { FraJer.Abs.iif1 $3 $6 $10 }
-  | 'if' '(' BExpr ')' '{' Instr '}' { FraJer.Abs.iif2 $3 $6 }
-  | 'while' '(' BExpr ')' '{' Instr '}' { FraJer.Abs.IWhile $3 $6 }
-  | 'for' '(' VarIdent '=' IExpr 'to' IExpr ')' '{' Instr '}' { FraJer.Abs.IFor $3 $5 $7 $10 }
-  | 'return' '(' IExpr ')' { FraJer.Abs.IReturn $3 }
-  | 'print' '(' IExpr ')' { FraJer.Abs.IPrint $3 }
-  | 'swap' '(' VarIdent ',' VarIdent ')' { FraJer.Abs.ISwap $3 $5 }
-  | 'break' '(' IExpr ')' { FraJer.Abs.IBreak $3 }
-  | 'break' { FraJer.Abs.IBreak1 }
-  | 'continue' 'outer' '(' IExpr ')' { FraJer.Abs.IContinue $4 }
-  | 'continue' { FraJer.Abs.IContinue0 }
-  | Type VarIdent '=' Expr { FraJer.Abs.VarDef $1 $2 $4 }
-  | 'Array' Type ArrIdent '[' IExpr ']' '(' Expr ')' { FraJer.Abs.ArrDefInit $2 $3 $5 $8 }
-  | 'Array' Type ArrIdent '[' IExpr ']' { FraJer.Abs.ArrDef $2 $3 $5 }
-  | ArrIdent '[' IExpr ']' '=' '(' IExpr ')' { FraJer.Abs.ArrElSet $1 $3 $7 }
-  | 'Dict' Type DictIdent { FraJer.Abs.DictDef $2 $3 }
-  | DictIdent '[' IExpr ']' 'set' '(' IExpr ')' { FraJer.Abs.DictElSet $1 $3 $7 }
-  | FType FuncIdent '(' Params ')' '{' Instr '}' { FraJer.Abs.FuncDef $1 $2 $4 $7 }
-  | VarIdent '=' IExpr { FraJer.Abs.VarAssign $1 $3 }
-  | VarIdent '+=' IExpr { FraJer.Abs.VarAssignPlus $1 $3 }
-  | VarIdent '-=' IExpr { FraJer.Abs.VarAssignMinus $1 $3 }
-  | VarIdent '*=' IExpr { FraJer.Abs.VarAssignMul $1 $3 }
-  | VarIdent '/=' IExpr { FraJer.Abs.VarAssignDiv $1 $3 }
-  | VarIdent '%=' IExpr { FraJer.Abs.VarAssignMod $1 $3 }
-  | 'debug' 'assignment' 'enable' VarIdent { FraJer.Abs.DebugAssEnable $4 }
-  | 'debug' 'assignment' 'disable' VarIdent { FraJer.Abs.DebugAssDisable $4 }
-  | 'debug' 'reading' 'enable' VarIdent { FraJer.Abs.DebugReadEnable $4 }
-  | 'debug' 'reading' 'disable' VarIdent { FraJer.Abs.DebugReadDisable $4 }
-
 Instr :: { FraJer.Abs.Instr }
 Instr : Instr1 ';' Instr { FraJer.Abs.ISeq $1 $3 } | Instr1 { $1 }
+
+Instr1 :: { FraJer.Abs.Instr }
+Instr1 : Def { FraJer.Abs.Def $1 } | Stmt { FraJer.Abs.Stmt $1 }
+
+Def1 :: { FraJer.Abs.Def }
+Def1
+  : SType Ident '=' Expr { FraJer.Abs.VarDef $1 $2 $4 }
+  | FType Ident '(' Params ')' '{' Instr '}' { FraJer.Abs.FuncDef $1 $2 $4 $7 }
+  | 'Array' SType Ident '[' Expr ']' '(' Expr ')' { FraJer.Abs.ArrDefInit $2 $3 $5 $8 }
+  | 'Array' SType Ident '[' Expr ']' { FraJer.Abs.ArrDef $2 $3 $5 }
+  | 'Dict' SType Ident { FraJer.Abs.DictDef $2 $3 }
+
+Def :: { FraJer.Abs.Def }
+Def : Def1 { $1 }
+
+Stmt1 :: { FraJer.Abs.Stmt }
+Stmt1
+  : 'if' '(' Expr ')' '{' Stmt '}' 'else' '{' Stmt '}' { FraJer.Abs.sif1 $3 $6 $10 }
+  | 'if' '(' Expr ')' '{' Stmt '}' { FraJer.Abs.sif2 $3 $6 }
+  | 'while' '(' Expr ')' '{' Stmt '}' { FraJer.Abs.SWhile $3 $6 }
+  | 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Stmt '}' { FraJer.Abs.SFor $3 $5 $7 $10 }
+  | 'skip' { FraJer.Abs.SSkip }
+  | 'return' '(' Expr ')' { FraJer.Abs.SReturn $3 }
+  | 'print' '(' Expr ')' { FraJer.Abs.SPrint $3 }
+  | 'swap' '(' Ident ',' Ident ')' { FraJer.Abs.SSwap $3 $5 }
+  | 'break' '(' Expr ')' { FraJer.Abs.SBreak $3 }
+  | 'break' { FraJer.Abs.SBreak1 }
+  | 'continue' 'outer' '(' Expr ')' { FraJer.Abs.SContinue $4 }
+  | 'continue' { FraJer.Abs.SContinue0 }
+  | Ident '=' Expr { FraJer.Abs.VarAssign $1 $3 }
+  | Ident '+=' Expr { FraJer.Abs.VarAssignPlus $1 $3 }
+  | Ident '-=' Expr { FraJer.Abs.VarAssignMinus $1 $3 }
+  | Ident '*=' Expr { FraJer.Abs.VarAssignMul $1 $3 }
+  | Ident '/=' Expr { FraJer.Abs.VarAssignDiv $1 $3 }
+  | Ident '%=' Expr { FraJer.Abs.VarAssignMod $1 $3 }
+  | Ident '[' Expr ']' '=' '(' Expr ')' { FraJer.Abs.ArrElSet $1 $3 $7 }
+  | Ident 'set' '[' Expr ']' 'to' '(' Expr ')' { FraJer.Abs.DictElSet $1 $4 $8 }
+  | 'debug' 'assignment' 'enable' Ident { FraJer.Abs.DebugAssEnable $4 }
+  | 'debug' 'assignment' 'disable' Ident { FraJer.Abs.DebugAssDisable $4 }
+  | 'debug' 'reading' 'enable' Ident { FraJer.Abs.DebugReadEnable $4 }
+  | 'debug' 'reading' 'disable' Ident { FraJer.Abs.DebugReadDisable $4 }
+
+Stmt :: { FraJer.Abs.Stmt }
+Stmt : Stmt1 { $1 }
 
 {
 

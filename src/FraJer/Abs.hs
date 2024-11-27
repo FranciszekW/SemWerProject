@@ -10,122 +10,103 @@ import Prelude (Integer, String)
 import qualified Prelude as C (Eq, Ord, Show, Read)
 import qualified Data.String
 
-data Type = TInt | TBool
+data SType = STInt | STBool
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data FType = FTInt | FTBool
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data VarIdent = Var Ident
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data ArrIdent = Arr Ident
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data DictIdent = Dict Ident
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data FuncIdent = Func Ident
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data Expr = IE IExpr | BE BExpr
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data IExpr
-    = EPlus IExpr IExpr
-    | EMinus IExpr IExpr
-    | EDiv IExpr IExpr
-    | EMul IExpr IExpr
-    | EMod IExpr IExpr
+data Expr
+    = FuncVal Ident Args
+    | VarVal Ident
+    | EPlus Expr Expr
+    | EMinus Expr Expr
+    | EDiv Expr Expr
+    | EMul Expr Expr
+    | EMod Expr Expr
     | ENum Integer
-    | EVar VarIdent
-    | EPostInc VarIdent
-    | EPreInc VarIdent
-    | EPostDec VarIdent
-    | EPreDec VarIdent
-    | EArray ArrIdent IExpr
-    | EDict DictIdent IExpr
-    | EDictB DictIdent BExpr
-    | EFuncVal FuncIdent Args
-  deriving (C.Eq, C.Ord, C.Show, C.Read)
-
-data BExpr
-    = BTrue
+    | EPostInc Ident
+    | EPreInc Ident
+    | EPostDec Ident
+    | EPreDec Ident
+    | EArray Ident Expr
+    | EDict Ident Expr
+    | BTrue
     | BFalse
-    | BVar VarIdent
-    | BEq IExpr IExpr
-    | BLeq IExpr IExpr
-    | BGeq IExpr IExpr
-    | BLt IExpr IExpr
-    | BGt IExpr IExpr
-    | BNeq IExpr IExpr
-    | BEqB BExpr BExpr
-    | BNeqB BExpr BExpr
-    | BNot BExpr
-    | BOr BExpr BExpr
-    | BAnd BExpr BExpr
-    | BXor BExpr BExpr
-    | BArray ArrIdent IExpr
-    | BDict DictIdent IExpr
-    | BDictB DictIdent BExpr
-    | BDictHasKey DictIdent IExpr
-    | BDictHasKeyB DictIdent BExpr
-    | BFuncVal FuncIdent Args
+    | EEq Expr Expr
+    | ELeq Expr Expr
+    | EGeq Expr Expr
+    | ELt Expr Expr
+    | EGt Expr Expr
+    | ENeq Expr Expr
+    | BNot Expr
+    | BOr Expr Expr
+    | BAnd Expr Expr
+    | BXor Expr Expr
+    | BDictHasKey Ident Expr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Args = ArgsNone | ArgsOne Expr | ArgsMany Expr Args
+data Args
+    = ArgsVoid
+    | ArgsOne Expr
+    | ArgsMany Expr Args
+    | ArgsLambda Lambda
+    | ArgsLambdaMany Lambda Args
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data Params
+    = ParamsNone
+    | ParamVar SType Ident
+    | ParamFunc FType Ident
+    | ParamVarMany SType Ident Params
+    | ParamFuncMany FType Ident Params
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Lambda = Lam FType Params Instr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Params
-    = ParamsNone
-    | ParamVar VarIdent Type
-    | ParamFunc FuncIdent FType
-    | ParamLambda Lambda
-    | ParamVarMany VarIdent Type Params
-    | ParamFuncMany FuncIdent FType Params
-    | ParamLambdaMany Lambda Params
+data Instr = ISeq Instr Instr | Def Def | Stmt Stmt
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Instr
-    = ISkip
-    | ISeq Instr Instr
-    | IIf BExpr Instr Instr
-    | IWhile BExpr Instr
-    | IFor VarIdent IExpr IExpr Instr
-    | IReturn IExpr
-    | IPrint IExpr
-    | ISwap VarIdent VarIdent
-    | IBreak IExpr
-    | IBreak1
-    | IContinue IExpr
-    | IContinue0
-    | VarDef Type VarIdent Expr
-    | ArrDefInit Type ArrIdent IExpr Expr
-    | ArrDef Type ArrIdent IExpr
-    | ArrElSet ArrIdent IExpr IExpr
-    | DictDef Type DictIdent
-    | DictElSet DictIdent IExpr IExpr
-    | FuncDef FType FuncIdent Params Instr
-    | VarAssign VarIdent IExpr
-    | VarAssignPlus VarIdent IExpr
-    | VarAssignMinus VarIdent IExpr
-    | VarAssignMul VarIdent IExpr
-    | VarAssignDiv VarIdent IExpr
-    | VarAssignMod VarIdent IExpr
-    | DebugAssEnable VarIdent
-    | DebugAssDisable VarIdent
-    | DebugReadEnable VarIdent
-    | DebugReadDisable VarIdent
+data Def
+    = VarDef SType Ident Expr
+    | FuncDef FType Ident Params Instr
+    | ArrDefInit SType Ident Expr Expr
+    | ArrDef SType Ident Expr
+    | DictDef SType Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-iif1 :: BExpr -> Instr -> Instr -> Instr
-iif1 = \ b1 i1 i2 -> IIf b1 i1 i2
+data Stmt
+    = SIf Expr Stmt Stmt
+    | SWhile Expr Stmt
+    | SFor Ident Expr Expr Stmt
+    | SSkip
+    | SReturn Expr
+    | SPrint Expr
+    | SSwap Ident Ident
+    | SBreak Expr
+    | SBreak1
+    | SContinue Expr
+    | SContinue0
+    | VarAssign Ident Expr
+    | VarAssignPlus Ident Expr
+    | VarAssignMinus Ident Expr
+    | VarAssignMul Ident Expr
+    | VarAssignDiv Ident Expr
+    | VarAssignMod Ident Expr
+    | ArrElSet Ident Expr Expr
+    | DictElSet Ident Expr Expr
+    | DebugAssEnable Ident
+    | DebugAssDisable Ident
+    | DebugReadEnable Ident
+    | DebugReadDisable Ident
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-iif2 :: BExpr -> Instr -> Instr
-iif2 = \ b1 i1 -> IIf b1 i1 ISkip
+sif1 :: Expr -> Stmt -> Stmt -> Stmt
+sif1 = \ b1 i1 i2 -> SIf b1 i1 i2
+
+sif2 :: Expr -> Stmt -> Stmt
+sif2 = \ b1 i1 -> SIf b1 i1 SSkip
 
 newtype Ident = Ident String
   deriving (C.Eq, C.Ord, C.Show, C.Read, Data.String.IsString)

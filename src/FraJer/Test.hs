@@ -20,7 +20,7 @@ import Control.Monad      ( when )
 
 import FraJer.Abs   ()
 import FraJer.Lex   ( Token, mkPosToken )
-import FraJer.Par   ( pType, myLexer )
+import FraJer.Par   ( pInstr, myLexer )
 import FraJer.Print ( Print, printTree )
 import FraJer.Skel  ()
 
@@ -70,7 +70,7 @@ main = do
   args <- getArgs
   case args of
     ["--help"] -> usage
-    []         -> getContents >>= run 2 pType
-    "-s":fs    -> mapM_ (runFile 0 pType) fs
-    fs         -> mapM_ (runFile 2 pType) fs
+    []         -> getContents >>= run 2 pInstr
+    "-s":fs    -> mapM_ (runFile 0 pInstr) fs
+    fs         -> mapM_ (runFile 2 pInstr) fs
 

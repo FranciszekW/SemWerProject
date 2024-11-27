@@ -2,6 +2,7 @@
 
 # Makefile for building the parser and test program.
 
+BNFC       = bnfc
 GHC        = ghc
 HAPPY      = happy
 HAPPY_OPTS = --array --info --ghc --coerce
@@ -10,16 +11,15 @@ ALEX_OPTS  = --ghc
 
 # List of goals not corresponding to file names.
 
+TARGETS = FraJer/Test Interpreter
+
 .PHONY : all clean distclean
 
 # Default goal.
 
-all : FraJer/Test
+all : ${TARGETS}
 
 # Rules for building the parser.
-
-FraJer/Abs.hs FraJer/Lex.x FraJer/Par.y FraJer/Print.hs FraJer/Test.hs : FraJer.cf
-	bnfc --haskell -d FraJer.cf
 
 %.hs : %.y
 	${HAPPY} ${HAPPY_OPTS} $<
@@ -27,16 +27,23 @@ FraJer/Abs.hs FraJer/Lex.x FraJer/Par.y FraJer/Print.hs FraJer/Test.hs : FraJer.
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
+FraJer/Abs.hs: FraJer.cf
+	${BNFC} -d $<
+
+
 FraJer/Test : FraJer/Abs.hs FraJer/Lex.hs FraJer/Par.hs FraJer/Print.hs FraJer/Test.hs
 	${GHC} ${GHC_OPTS} $@
+
+
+Interpreter : FraJer/Abs.hs FraJer/Lex.hs FraJer/Par.hs FraJer/Print.hs Interpreter.hs
+	${GHC} ${GHC_OPTS} $@
+
 
 # Rules for cleaning generated files.
 
 clean :
-	-rm -f FraJer/*.hi FraJer/*.o FraJer/*.log FraJer/*.aux FraJer/*.dvi
+	-rm -f *.hi *.o *.log *.aux *.dvi ${TARGETS} FraJer/* *~ *.bak
+	-rmdir FraJer
 
-distclean : clean
-	-rm -f FraJer/Abs.hs FraJer/Abs.hs.bak FraJer/ComposOp.hs FraJer/ComposOp.hs.bak FraJer/Doc.txt FraJer/Doc.txt.bak FraJer/ErrM.hs FraJer/ErrM.hs.bak FraJer/Layout.hs FraJer/Layout.hs.bak FraJer/Lex.x FraJer/Lex.x.bak FraJer/Par.y FraJer/Par.y.bak FraJer/Print.hs FraJer/Print.hs.bak FraJer/Skel.hs FraJer/Skel.hs.bak FraJer/Test.hs FraJer/Test.hs.bak FraJer/XML.hs FraJer/XML.hs.bak FraJer/AST.agda FraJer/AST.agda.bak FraJer/Parser.agda FraJer/Parser.agda.bak FraJer/IOLib.agda FraJer/IOLib.agda.bak FraJer/Main.agda FraJer/Main.agda.bak FraJer/FraJer.dtd FraJer/FraJer.dtd.bak FraJer/Test FraJer/Lex.hs FraJer/Par.hs FraJer/Par.info FraJer/ParData.hs Makefile
-	-rmdir -p FraJer/
 
 # EOF

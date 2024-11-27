@@ -5,7 +5,7 @@ in BNFC.
 
 -}
 
-entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, SType, FType, VarIdent, ArrIdent, DictIdent, FuncIdent;
+entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, SType, FType;
 
 -- Syntax for comments
 comment "//" ;
@@ -22,18 +22,12 @@ STBool. SType ::= "Bool";
 FTInt. FType ::= "IntFunc";
 FTBool. FType ::= "BoolFunc";
 
--- Probably will need to remove those, static type control is interpreter's job
-Var. VarIdent ::= Ident;
-Arr. ArrIdent ::= Ident;
-Dict. DictIdent ::= Ident;
-Func. FuncIdent ::= Ident;
-
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC Expressions for general expressions
 
-FuncVal.   Expr2 ::= FuncIdent "(" Args ")";
-VarVal.    Expr2 ::= VarIdent;
+FuncVal.   Expr2 ::= Ident "(" Args ")";
+VarVal.    Expr2 ::= Ident;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -51,13 +45,13 @@ EMul.    Expr1 ::= Expr1 "*" Expr2;
 EMod.    Expr1 ::= Expr1 "%" Expr2;
 ENum.    Expr2 ::= Integer;
 
-EPostInc. Expr2 ::= VarIdent "++";
-EPreInc.  Expr2 ::= "++" VarIdent;
-EPostDec. Expr2 ::= VarIdent "--";
-EPreDec.  Expr2 ::= "--" VarIdent;
+EPostInc. Expr2 ::= Ident "++";
+EPreInc.  Expr2 ::= "++" Ident;
+EPostDec. Expr2 ::= Ident "--";
+EPreDec.  Expr2 ::= "--" Ident;
 
-EArray.  Expr2 ::= ArrIdent "[" Expr "]";
-EDict.   Expr2 ::= DictIdent "get" "[" Expr "]";
+EArray.  Expr2 ::= Ident "[" Expr "]";
+EDict.   Expr2 ::= Ident "get" "[" Expr "]";
 
 _.       Expr2 ::= "(" Expr ")"; -- We silently introduce parentheses
 _.       Expr1  ::= Expr2;       -- We silently make Expr1 and Expr2 equal
@@ -87,7 +81,7 @@ BOr.    Expr ::= Expr "or" Expr1;
 BAnd.   Expr ::= Expr "and" Expr1;
 BXor.   Expr ::= Expr "xor" Expr1;
 
-BDictHasKey.  Expr2 ::= DictIdent "has" "key" "[" Expr "]";
+BDictHasKey.  Expr2 ::= Ident "has" "key" "[" Expr "]";
 
 
 -- --------------------------------------------------------------------------------------------- --
@@ -105,10 +99,10 @@ ArgsLambda. Args ::= Lambda;
 ArgsLambdaMany. Args ::= Lambda "," Args;
 
 ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= SType VarIdent;
-ParamFunc.       Params ::= FType FuncIdent;
-ParamVarMany.    Params ::= SType VarIdent "," Params;
-ParamFuncMany.   Params ::= FType FuncIdent "," Params;
+ParamVar.        Params ::= SType Ident;
+ParamFunc.       Params ::= FType Ident;
+ParamVarMany.    Params ::= SType Ident "," Params;
+ParamFuncMany.   Params ::= FType Ident "," Params;
 
 Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 
@@ -123,17 +117,17 @@ Stmt.      Instr1 ::= Stmt;
 _. Instr ::= Instr1;
 
 -- Grammar for defining variables and functions
--- vardef ::= type VarIdent = Expr | Array type ArrIdent "[" Ie "]" (Ie) | Array type ArrIdent "[" e "]" | Dict type DictIdent
--- funcdef ::= FType FuncIdent (params) { I }
+-- vardef ::= type Ident = Expr | Array type Ident "[" Ie "]" (Ie) | Array type Ident "[" e "]" | Dict type Ident
+-- funcdef ::= FType Ident (params) { I }
 
-VarDef.        Def1 ::= SType VarIdent "=" Expr;
+VarDef.        Def1 ::= SType Ident "=" Expr;
 
 -- functions can also have local variables inside, so we allow declarations in the function body
-FuncDef.       Def1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
+FuncDef.       Def1 ::= FType Ident "(" Params ")" "{" Instr "}";
 
-ArrDefInit.    Def1 ::= "Array" SType ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def1 ::= "Array" SType ArrIdent "[" Expr "]";
-DictDef.       Def1 ::= "Dict" SType DictIdent;
+ArrDefInit.    Def1 ::= "Array" SType Ident "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def1 ::= "Array" SType Ident "[" Expr "]";
+DictDef.       Def1 ::= "Dict" SType Ident;
 
 _. Def ::= Def1;
 
@@ -150,7 +144,7 @@ internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
 sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
 sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}";
 SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
-SFor.       Stmt1 ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Stmt "}";
+SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Stmt "}";
 
 
 define sif1 b1 i1 i2 = SIf b1 i1 i2;
@@ -159,7 +153,7 @@ define sif2 b1 i1  = SIf b1 i1 SSkip;
 SSkip.      Stmt1 ::= "skip";
 SReturn.    Stmt1 ::= "return" "(" Expr ")";
 SPrint.     Stmt1 ::= "print" "(" Expr ")";
-SSwap.      Stmt1 ::= "swap" "(" VarIdent "," VarIdent ")";
+SSwap.      Stmt1 ::= "swap" "(" Ident "," Ident ")";
 SBreak.     Stmt1 ::= "break" "(" Expr ")";
 SBreak1.    Stmt1 ::= "break";
 SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
@@ -172,22 +166,22 @@ SContinue0. Stmt1 ::= "continue";
 -- grammar for assigning variables
 -- varassign ::= x = e | x += e | x -= e | x *= e | x /= e | x %= e
 
-VarAssign.         Stmt1 ::= VarIdent "=" Expr;
-VarAssignPlus.     Stmt1 ::= VarIdent "+=" Expr;
-VarAssignMinus.    Stmt1 ::= VarIdent "-=" Expr;
-VarAssignMul.      Stmt1 ::= VarIdent "*=" Expr;
-VarAssignDiv.      Stmt1 ::= VarIdent "/=" Expr;
-VarAssignMod.      Stmt1 ::= VarIdent "%=" Expr;
+VarAssign.         Stmt1 ::= Ident "=" Expr;
+VarAssignPlus.     Stmt1 ::= Ident "+=" Expr;
+VarAssignMinus.    Stmt1 ::= Ident "-=" Expr;
+VarAssignMul.      Stmt1 ::= Ident "*=" Expr;
+VarAssignDiv.      Stmt1 ::= Ident "/=" Expr;
+VarAssignMod.      Stmt1 ::= Ident "%=" Expr;
 
-ArrElSet.      Stmt1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
-DictElSet.     Stmt1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
+ArrElSet.      Stmt1 ::= Ident "[" Expr "]" "=" "(" Expr ")";
+DictElSet.     Stmt1 ::= Ident "set" "[" Expr "]" "to" "(" Expr ")";
 
 -- grammar for debug instructions
 
-DebugAssEnable.     Stmt1 ::= "debug" "assignment" "enable" VarIdent;      -- ;)
-DebugAssDisable.    Stmt1 ::= "debug" "assignment" "disable" VarIdent;
-DebugReadEnable.    Stmt1 ::= "debug" "reading" "enable" VarIdent;
-DebugReadDisable.   Stmt1 ::= "debug" "reading" "disable" VarIdent;
+DebugAssEnable.     Stmt1 ::= "debug" "assignment" "enable" Ident;      -- ;)
+DebugAssDisable.    Stmt1 ::= "debug" "assignment" "disable" Ident;
+DebugReadEnable.    Stmt1 ::= "debug" "reading" "enable" Ident;
+DebugReadDisable.   Stmt1 ::= "debug" "reading" "disable" Ident;
 
 _. Stmt ::= Stmt1;
 

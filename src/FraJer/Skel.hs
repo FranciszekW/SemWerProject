@@ -19,127 +19,102 @@ transIdent :: FraJer.Abs.Ident -> Result
 transIdent x = case x of
   FraJer.Abs.Ident string -> failure x
 
-transType :: FraJer.Abs.Type -> Result
-transType x = case x of
-  FraJer.Abs.TInt -> failure x
-  FraJer.Abs.TBool -> failure x
+transSType :: FraJer.Abs.SType -> Result
+transSType x = case x of
+  FraJer.Abs.STInt -> failure x
+  FraJer.Abs.STBool -> failure x
 
 transFType :: FraJer.Abs.FType -> Result
 transFType x = case x of
   FraJer.Abs.FTInt -> failure x
   FraJer.Abs.FTBool -> failure x
 
-transVarIdent :: FraJer.Abs.VarIdent -> Result
-transVarIdent x = case x of
-  FraJer.Abs.Var ident -> failure x
-
-transArrIdent :: FraJer.Abs.ArrIdent -> Result
-transArrIdent x = case x of
-  FraJer.Abs.Arr ident -> failure x
-
-transDictIdent :: FraJer.Abs.DictIdent -> Result
-transDictIdent x = case x of
-  FraJer.Abs.Dict ident -> failure x
-
-transFuncIdent :: FraJer.Abs.FuncIdent -> Result
-transFuncIdent x = case x of
-  FraJer.Abs.Func ident -> failure x
-
 transExpr :: FraJer.Abs.Expr -> Result
 transExpr x = case x of
-  FraJer.Abs.IE iexpr -> failure x
-  FraJer.Abs.BE bexpr -> failure x
-
-transIExpr :: FraJer.Abs.IExpr -> Result
-transIExpr x = case x of
-  FraJer.Abs.EPlus iexpr1 iexpr2 -> failure x
-  FraJer.Abs.EMinus iexpr1 iexpr2 -> failure x
-  FraJer.Abs.EDiv iexpr1 iexpr2 -> failure x
-  FraJer.Abs.EMul iexpr1 iexpr2 -> failure x
-  FraJer.Abs.EMod iexpr1 iexpr2 -> failure x
+  FraJer.Abs.FuncVal ident args -> failure x
+  FraJer.Abs.VarVal ident -> failure x
+  FraJer.Abs.EPlus expr1 expr2 -> failure x
+  FraJer.Abs.EMinus expr1 expr2 -> failure x
+  FraJer.Abs.EDiv expr1 expr2 -> failure x
+  FraJer.Abs.EMul expr1 expr2 -> failure x
+  FraJer.Abs.EMod expr1 expr2 -> failure x
   FraJer.Abs.ENum integer -> failure x
-  FraJer.Abs.EVar varident -> failure x
-  FraJer.Abs.EPostInc varident -> failure x
-  FraJer.Abs.EPreInc varident -> failure x
-  FraJer.Abs.EPostDec varident -> failure x
-  FraJer.Abs.EPreDec varident -> failure x
-  FraJer.Abs.EArray arrident iexpr -> failure x
-  FraJer.Abs.EDict dictident iexpr -> failure x
-  FraJer.Abs.EDictB dictident bexpr -> failure x
-  FraJer.Abs.EFuncVal funcident args -> failure x
-
-transBExpr :: FraJer.Abs.BExpr -> Result
-transBExpr x = case x of
+  FraJer.Abs.EPostInc ident -> failure x
+  FraJer.Abs.EPreInc ident -> failure x
+  FraJer.Abs.EPostDec ident -> failure x
+  FraJer.Abs.EPreDec ident -> failure x
+  FraJer.Abs.EArray ident expr -> failure x
+  FraJer.Abs.EDict ident expr -> failure x
   FraJer.Abs.BTrue -> failure x
   FraJer.Abs.BFalse -> failure x
-  FraJer.Abs.BVar varident -> failure x
-  FraJer.Abs.BEq iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BLeq iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BGeq iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BLt iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BGt iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BNeq iexpr1 iexpr2 -> failure x
-  FraJer.Abs.BEqB bexpr1 bexpr2 -> failure x
-  FraJer.Abs.BNeqB bexpr1 bexpr2 -> failure x
-  FraJer.Abs.BNot bexpr -> failure x
-  FraJer.Abs.BOr bexpr1 bexpr2 -> failure x
-  FraJer.Abs.BAnd bexpr1 bexpr2 -> failure x
-  FraJer.Abs.BXor bexpr1 bexpr2 -> failure x
-  FraJer.Abs.BArray arrident iexpr -> failure x
-  FraJer.Abs.BDict dictident iexpr -> failure x
-  FraJer.Abs.BDictB dictident bexpr -> failure x
-  FraJer.Abs.BDictHasKey dictident iexpr -> failure x
-  FraJer.Abs.BDictHasKeyB dictident bexpr -> failure x
-  FraJer.Abs.BFuncVal funcident args -> failure x
+  FraJer.Abs.EEq expr1 expr2 -> failure x
+  FraJer.Abs.ELeq expr1 expr2 -> failure x
+  FraJer.Abs.EGeq expr1 expr2 -> failure x
+  FraJer.Abs.ELt expr1 expr2 -> failure x
+  FraJer.Abs.EGt expr1 expr2 -> failure x
+  FraJer.Abs.ENeq expr1 expr2 -> failure x
+  FraJer.Abs.BNot expr -> failure x
+  FraJer.Abs.BOr expr1 expr2 -> failure x
+  FraJer.Abs.BAnd expr1 expr2 -> failure x
+  FraJer.Abs.BXor expr1 expr2 -> failure x
+  FraJer.Abs.BDictHasKey ident expr -> failure x
 
 transArgs :: FraJer.Abs.Args -> Result
 transArgs x = case x of
-  FraJer.Abs.ArgsNone -> failure x
+  FraJer.Abs.ArgsVoid -> failure x
   FraJer.Abs.ArgsOne expr -> failure x
   FraJer.Abs.ArgsMany expr args -> failure x
+  FraJer.Abs.ArgsLambda lambda -> failure x
+  FraJer.Abs.ArgsLambdaMany lambda args -> failure x
+
+transParams :: FraJer.Abs.Params -> Result
+transParams x = case x of
+  FraJer.Abs.ParamsNone -> failure x
+  FraJer.Abs.ParamVar stype ident -> failure x
+  FraJer.Abs.ParamFunc ftype ident -> failure x
+  FraJer.Abs.ParamVarMany stype ident params -> failure x
+  FraJer.Abs.ParamFuncMany ftype ident params -> failure x
 
 transLambda :: FraJer.Abs.Lambda -> Result
 transLambda x = case x of
   FraJer.Abs.Lam ftype params instr -> failure x
 
-transParams :: FraJer.Abs.Params -> Result
-transParams x = case x of
-  FraJer.Abs.ParamsNone -> failure x
-  FraJer.Abs.ParamVar varident type_ -> failure x
-  FraJer.Abs.ParamFunc funcident ftype -> failure x
-  FraJer.Abs.ParamLambda lambda -> failure x
-  FraJer.Abs.ParamVarMany varident type_ params -> failure x
-  FraJer.Abs.ParamFuncMany funcident ftype params -> failure x
-  FraJer.Abs.ParamLambdaMany lambda params -> failure x
-
 transInstr :: FraJer.Abs.Instr -> Result
 transInstr x = case x of
-  FraJer.Abs.ISkip -> failure x
   FraJer.Abs.ISeq instr1 instr2 -> failure x
-  FraJer.Abs.IIf bexpr instr1 instr2 -> failure x
-  FraJer.Abs.IWhile bexpr instr -> failure x
-  FraJer.Abs.IFor varident iexpr1 iexpr2 instr -> failure x
-  FraJer.Abs.IReturn iexpr -> failure x
-  FraJer.Abs.IPrint iexpr -> failure x
-  FraJer.Abs.ISwap varident1 varident2 -> failure x
-  FraJer.Abs.IBreak iexpr -> failure x
-  FraJer.Abs.IBreak1 -> failure x
-  FraJer.Abs.IContinue iexpr -> failure x
-  FraJer.Abs.IContinue0 -> failure x
-  FraJer.Abs.VarDef type_ varident expr -> failure x
-  FraJer.Abs.ArrDefInit type_ arrident iexpr expr -> failure x
-  FraJer.Abs.ArrDef type_ arrident iexpr -> failure x
-  FraJer.Abs.ArrElSet arrident iexpr1 iexpr2 -> failure x
-  FraJer.Abs.DictDef type_ dictident -> failure x
-  FraJer.Abs.DictElSet dictident iexpr1 iexpr2 -> failure x
-  FraJer.Abs.FuncDef ftype funcident params instr -> failure x
-  FraJer.Abs.VarAssign varident iexpr -> failure x
-  FraJer.Abs.VarAssignPlus varident iexpr -> failure x
-  FraJer.Abs.VarAssignMinus varident iexpr -> failure x
-  FraJer.Abs.VarAssignMul varident iexpr -> failure x
-  FraJer.Abs.VarAssignDiv varident iexpr -> failure x
-  FraJer.Abs.VarAssignMod varident iexpr -> failure x
-  FraJer.Abs.DebugAssEnable varident -> failure x
-  FraJer.Abs.DebugAssDisable varident -> failure x
-  FraJer.Abs.DebugReadEnable varident -> failure x
-  FraJer.Abs.DebugReadDisable varident -> failure x
+  FraJer.Abs.Def def -> failure x
+  FraJer.Abs.Stmt stmt -> failure x
+
+transDef :: FraJer.Abs.Def -> Result
+transDef x = case x of
+  FraJer.Abs.VarDef stype ident expr -> failure x
+  FraJer.Abs.FuncDef ftype ident params instr -> failure x
+  FraJer.Abs.ArrDefInit stype ident expr1 expr2 -> failure x
+  FraJer.Abs.ArrDef stype ident expr -> failure x
+  FraJer.Abs.DictDef stype ident -> failure x
+
+transStmt :: FraJer.Abs.Stmt -> Result
+transStmt x = case x of
+  FraJer.Abs.SIf expr stmt1 stmt2 -> failure x
+  FraJer.Abs.SWhile expr stmt -> failure x
+  FraJer.Abs.SFor ident expr1 expr2 stmt -> failure x
+  FraJer.Abs.SSkip -> failure x
+  FraJer.Abs.SReturn expr -> failure x
+  FraJer.Abs.SPrint expr -> failure x
+  FraJer.Abs.SSwap ident1 ident2 -> failure x
+  FraJer.Abs.SBreak expr -> failure x
+  FraJer.Abs.SBreak1 -> failure x
+  FraJer.Abs.SContinue expr -> failure x
+  FraJer.Abs.SContinue0 -> failure x
+  FraJer.Abs.VarAssign ident expr -> failure x
+  FraJer.Abs.VarAssignPlus ident expr -> failure x
+  FraJer.Abs.VarAssignMinus ident expr -> failure x
+  FraJer.Abs.VarAssignMul ident expr -> failure x
+  FraJer.Abs.VarAssignDiv ident expr -> failure x
+  FraJer.Abs.VarAssignMod ident expr -> failure x
+  FraJer.Abs.ArrElSet ident expr1 expr2 -> failure x
+  FraJer.Abs.DictElSet ident expr1 expr2 -> failure x
+  FraJer.Abs.DebugAssEnable ident -> failure x
+  FraJer.Abs.DebugAssDisable ident -> failure x
+  FraJer.Abs.DebugReadEnable ident -> failure x
+  FraJer.Abs.DebugReadDisable ident -> failure x

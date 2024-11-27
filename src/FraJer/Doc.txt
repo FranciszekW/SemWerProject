@@ -29,21 +29,21 @@ The reserved words used in FraJer are the following:
   | ``Int`` | ``IntFunc`` | ``and`` | ``assignment``
   | ``break`` | ``continue`` | ``debug`` | ``disable``
   | ``else`` | ``enable`` | ``false`` | ``for``
-  | ``has`` | ``if`` | ``key`` | ``lambda``
-  | ``none`` | ``or`` | ``outer`` | ``print``
-  | ``reading`` | ``return`` | ``set`` | ``skip``
-  | ``swap`` | ``to`` | ``true`` | ``while``
-  | ``xor`` |  |  |
+  | ``get`` | ``has`` | ``if`` | ``key``
+  | ``lambda`` | ``none`` | ``or`` | ``outer``
+  | ``print`` | ``reading`` | ``return`` | ``set``
+  | ``skip`` | ``swap`` | ``to`` | ``true``
+  | ``void`` | ``while`` | ``xor`` |
 
 The symbols used in FraJer are the following:
-  | + | - | / | *
-  | % | ++ | -- | [
-  | ] | ( | ) | ==
+  | ( | ) | + | -
+  | / | * | % | ++
+  | -- | [ | ] | ==
   | <= | >= | < | >
   | != | ! | , | ->
-  | { | } | : | ;
-  | = | += | -= | *=
-  | /= | %= |  |
+  | { | } | ; | =
+  | += | -= | *= | /=
+  | %= |  |  |
 
 ===Comments===
 Single-line comments begin with //.Multiple-line comments are  enclosed with /* and */.
@@ -54,99 +54,86 @@ The symbols -> (production),  **|**  (union)
 and **eps** (empty rule) belong to the BNF notation.
 All other symbols are terminals.
 
-  | //Type// | -> | ``Int``
+  | //SType// | -> | ``Int``
   |  |  **|**  | ``Bool``
   | //FType// | -> | ``IntFunc``
   |  |  **|**  | ``BoolFunc``
-  | //VarIdent// | -> | //Ident//
-  | //ArrIdent// | -> | //Ident//
-  | //DictIdent// | -> | //Ident//
-  | //FuncIdent// | -> | //Ident//
-  | //Expr// | -> | //IExpr//
-  |  |  **|**  | //BExpr//
-  | //IExpr// | -> | //IExpr// ``+`` //IExpr1//
-  |  |  **|**  | //IExpr// ``-`` //IExpr1//
-  |  |  **|**  | //IExpr1//
-  | //IExpr1// | -> | //IExpr1// ``/`` //IExpr2//
-  |  |  **|**  | //IExpr1// ``*`` //IExpr2//
-  |  |  **|**  | //IExpr1// ``%`` //IExpr2//
-  |  |  **|**  | //IExpr2//
-  | //IExpr2// | -> | //Integer//
-  |  |  **|**  | //VarIdent//
-  |  |  **|**  | //VarIdent// ``++``
-  |  |  **|**  | ``++`` //VarIdent//
-  |  |  **|**  | //VarIdent// ``--``
-  |  |  **|**  | ``--`` //VarIdent//
-  |  |  **|**  | //ArrIdent// ``[`` //IExpr// ``]``
-  |  |  **|**  | //DictIdent// ``[`` //IExpr// ``]``
-  |  |  **|**  | //DictIdent// ``[`` //BExpr// ``]``
-  |  |  **|**  | //FuncIdent// ``(`` //Args// ``)``
-  |  |  **|**  | ``(`` //IExpr// ``)``
-  | //BExpr1// | -> | ``true``
+  | //Expr2// | -> | //Ident// ``(`` //Args// ``)``
+  |  |  **|**  | //Ident//
+  |  |  **|**  | //Integer//
+  |  |  **|**  | //Ident// ``++``
+  |  |  **|**  | ``++`` //Ident//
+  |  |  **|**  | //Ident// ``--``
+  |  |  **|**  | ``--`` //Ident//
+  |  |  **|**  | //Ident// ``[`` //Expr// ``]``
+  |  |  **|**  | //Ident// ``get`` ``[`` //Expr// ``]``
+  |  |  **|**  | ``(`` //Expr// ``)``
+  |  |  **|**  | ``true``
   |  |  **|**  | ``false``
-  |  |  **|**  | //VarIdent//
-  |  |  **|**  | //IExpr// ``==`` //IExpr//
-  |  |  **|**  | //IExpr// ``<=`` //IExpr//
-  |  |  **|**  | //IExpr// ``>=`` //IExpr//
-  |  |  **|**  | //IExpr// ``<`` //IExpr//
-  |  |  **|**  | //IExpr// ``>`` //IExpr//
-  |  |  **|**  | //IExpr// ``!=`` //IExpr//
-  |  |  **|**  | //BExpr// ``==`` //BExpr//
-  |  |  **|**  | //BExpr// ``!=`` //BExpr//
-  |  |  **|**  | ``!`` //BExpr1//
-  |  |  **|**  | //BExpr// ``or`` //BExpr1//
-  |  |  **|**  | //BExpr// ``and`` //BExpr1//
-  |  |  **|**  | //BExpr// ``xor`` //BExpr1//
-  |  |  **|**  | //ArrIdent// ``[`` //IExpr// ``]``
-  |  |  **|**  | //DictIdent// ``[`` //IExpr// ``]``
-  |  |  **|**  | //DictIdent// ``[`` //BExpr// ``]``
-  |  |  **|**  | //DictIdent// ``has`` ``key`` ``[`` //IExpr// ``]``
-  |  |  **|**  | //DictIdent// ``has`` ``key`` ``[`` //BExpr// ``]``
-  |  |  **|**  | //FuncIdent// ``(`` //Args// ``)``
-  |  |  **|**  | ``(`` //BExpr// ``)``
-  | //BExpr// | -> | //BExpr1//
-  | //Args// | -> | ``none``
+  |  |  **|**  | ``!`` //Expr2//
+  |  |  **|**  | //Ident// ``has`` ``key`` ``[`` //Expr// ``]``
+  | //Expr// | -> | //Expr// ``+`` //Expr1//
+  |  |  **|**  | //Expr// ``-`` //Expr1//
+  |  |  **|**  | //Expr1//
+  |  |  **|**  | //Expr// ``or`` //Expr1//
+  |  |  **|**  | //Expr// ``and`` //Expr1//
+  |  |  **|**  | //Expr// ``xor`` //Expr1//
+  | //Expr1// | -> | //Expr1// ``/`` //Expr2//
+  |  |  **|**  | //Expr1// ``*`` //Expr2//
+  |  |  **|**  | //Expr1// ``%`` //Expr2//
+  |  |  **|**  | //Expr2//
+  |  |  **|**  | //Expr1// ``==`` //Expr2//
+  |  |  **|**  | //Expr1// ``<=`` //Expr2//
+  |  |  **|**  | //Expr1// ``>=`` //Expr2//
+  |  |  **|**  | //Expr1// ``<`` //Expr2//
+  |  |  **|**  | //Expr1// ``>`` //Expr2//
+  |  |  **|**  | //Expr1// ``!=`` //Expr2//
+  | //Args// | -> | ``void``
   |  |  **|**  | //Expr//
   |  |  **|**  | //Expr// ``,`` //Args//
-  | //Lambda// | -> | //FType// ``lambda`` ``(`` //Params// ``)`` ``->`` ``{`` //Instr// ``}``
-  | //Params// | -> | ``none``
-  |  |  **|**  | //VarIdent// ``:`` //Type//
-  |  |  **|**  | //FuncIdent// ``:`` //FType//
   |  |  **|**  | //Lambda//
-  |  |  **|**  | //VarIdent// ``:`` //Type// ``,`` //Params//
-  |  |  **|**  | //FuncIdent// ``:`` //FType// ``,`` //Params//
-  |  |  **|**  | //Lambda// ``,`` //Params//
-  | //Instr1// | -> | ``skip``
-  |  |  **|**  | ``if`` ``(`` //BExpr// ``)`` ``{`` //Instr// ``}`` ``else`` ``{`` //Instr// ``}``
-  |  |  **|**  | ``if`` ``(`` //BExpr// ``)`` ``{`` //Instr// ``}``
-  |  |  **|**  | ``while`` ``(`` //BExpr// ``)`` ``{`` //Instr// ``}``
-  |  |  **|**  | ``for`` ``(`` //VarIdent// ``=`` //IExpr// ``to`` //IExpr// ``)`` ``{`` //Instr// ``}``
-  |  |  **|**  | ``return`` ``(`` //IExpr// ``)``
-  |  |  **|**  | ``print`` ``(`` //IExpr// ``)``
-  |  |  **|**  | ``swap`` ``(`` //VarIdent// ``,`` //VarIdent// ``)``
-  |  |  **|**  | ``break`` ``(`` //IExpr// ``)``
-  |  |  **|**  | ``break``
-  |  |  **|**  | ``continue`` ``outer`` ``(`` //IExpr// ``)``
-  |  |  **|**  | ``continue``
-  |  |  **|**  | //Type// //VarIdent// ``=`` //Expr//
-  |  |  **|**  | ``Array`` //Type// //ArrIdent// ``[`` //IExpr// ``]`` ``(`` //Expr// ``)``
-  |  |  **|**  | ``Array`` //Type// //ArrIdent// ``[`` //IExpr// ``]``
-  |  |  **|**  | //ArrIdent// ``[`` //IExpr// ``]`` ``=`` ``(`` //IExpr// ``)``
-  |  |  **|**  | ``Dict`` //Type// //DictIdent//
-  |  |  **|**  | //DictIdent// ``[`` //IExpr// ``]`` ``set`` ``(`` //IExpr// ``)``
-  |  |  **|**  | //FType// //FuncIdent// ``(`` //Params// ``)`` ``{`` //Instr// ``}``
-  |  |  **|**  | //VarIdent// ``=`` //IExpr//
-  |  |  **|**  | //VarIdent// ``+=`` //IExpr//
-  |  |  **|**  | //VarIdent// ``-=`` //IExpr//
-  |  |  **|**  | //VarIdent// ``*=`` //IExpr//
-  |  |  **|**  | //VarIdent// ``/=`` //IExpr//
-  |  |  **|**  | //VarIdent// ``%=`` //IExpr//
-  |  |  **|**  | ``debug`` ``assignment`` ``enable`` //VarIdent//
-  |  |  **|**  | ``debug`` ``assignment`` ``disable`` //VarIdent//
-  |  |  **|**  | ``debug`` ``reading`` ``enable`` //VarIdent//
-  |  |  **|**  | ``debug`` ``reading`` ``disable`` //VarIdent//
+  |  |  **|**  | //Lambda// ``,`` //Args//
+  | //Params// | -> | ``none``
+  |  |  **|**  | //SType// //Ident//
+  |  |  **|**  | //FType// //Ident//
+  |  |  **|**  | //SType// //Ident// ``,`` //Params//
+  |  |  **|**  | //FType// //Ident// ``,`` //Params//
+  | //Lambda// | -> | //FType// ``lambda`` ``(`` //Params// ``)`` ``->`` ``{`` //Instr// ``}``
   | //Instr// | -> | //Instr1// ``;`` //Instr//
   |  |  **|**  | //Instr1//
+  | //Instr1// | -> | //Def//
+  |  |  **|**  | //Stmt//
+  | //Def1// | -> | //SType// //Ident// ``=`` //Expr//
+  |  |  **|**  | //FType// //Ident// ``(`` //Params// ``)`` ``{`` //Instr// ``}``
+  |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]``
+  |  |  **|**  | ``Dict`` //SType// //Ident//
+  | //Def// | -> | //Def1//
+  | //Stmt1// | -> | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}`` ``else`` ``{`` //Stmt// ``}``
+  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
+  |  |  **|**  | ``while`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
+  |  |  **|**  | ``for`` ``(`` //Ident// ``=`` //Expr// ``to`` //Expr// ``)`` ``{`` //Stmt// ``}``
+  |  |  **|**  | ``skip``
+  |  |  **|**  | ``return`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``print`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``swap`` ``(`` //Ident// ``,`` //Ident// ``)``
+  |  |  **|**  | ``break`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``break``
+  |  |  **|**  | ``continue`` ``outer`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``continue``
+  |  |  **|**  | //Ident// ``=`` //Expr//
+  |  |  **|**  | //Ident// ``+=`` //Expr//
+  |  |  **|**  | //Ident// ``-=`` //Expr//
+  |  |  **|**  | //Ident// ``*=`` //Expr//
+  |  |  **|**  | //Ident// ``/=`` //Expr//
+  |  |  **|**  | //Ident// ``%=`` //Expr//
+  |  |  **|**  | //Ident// ``[`` //Expr// ``]`` ``=`` ``(`` //Expr// ``)``
+  |  |  **|**  | //Ident// ``set`` ``[`` //Expr// ``]`` ``to`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``debug`` ``assignment`` ``enable`` //Ident//
+  |  |  **|**  | ``debug`` ``assignment`` ``disable`` //Ident//
+  |  |  **|**  | ``debug`` ``reading`` ``enable`` //Ident//
+  |  |  **|**  | ``debug`` ``reading`` ``disable`` //Ident//
+  | //Stmt// | -> | //Stmt1//
 
 
 

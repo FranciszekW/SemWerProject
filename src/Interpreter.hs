@@ -4,6 +4,7 @@ import Prelude
 
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
+import System.IO.Unsafe   ( unsafePerformIO )
 import Control.Monad      ( when )
 
 import Data.Map
@@ -28,7 +29,7 @@ mapHasKey map arg = member arg map
 ------------------------------------------ TYPES (sic!) -------------------------------------------
 
 -- SType and FType are types from Frajer.cf.
-data Type = TSimple SType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
+data Type = SType | FType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
 
 -- Complex types (arrays and dictionaries)
 data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
@@ -94,6 +95,9 @@ setVarVal rhoV sto var val =
   let map = mapSet (currMap sto) loc val in
     CStore map (nextLoc sto)
 
+replaceNth :: [a] -> Int -> a -> [a]
+replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) xs
+
 ------------------------------------------ SEMANTICS ----------------------------------------------
 
 
@@ -102,8 +106,8 @@ setVarVal rhoV sto var val =
 eE :: Expr -> VEnv -> FEnv -> Store -> (Store, SimpleValue)
 
 {-
-FuncVal.   Expr2 ::= FuncIdent "(" Args ")";
-VarVal.    Expr2 ::= VarIdent;
+FuncVal.   Expr2 ::= Ident "(" Args ")";
+VarVal.    Expr2 ::= Ident;
 -}
 
 eE (ENum n) rhoV rhoF sto = (sto, VInt n)
@@ -124,8 +128,8 @@ EMul.    Expr1 ::= Expr1 "*" Expr2;
 EMod.    Expr1 ::= Expr1 "%" Expr2;
 ENum.    Expr2 ::= Integer;
 
-EArray.  Expr2 ::= ArrIdent "[" Expr "]";
-EDict.   Expr2 ::= DictIdent "get" "[" Expr "]";
+EArray.  Expr2 ::= Ident "[" Expr "]";
+EDict.   Expr2 ::= Ident "get" "[" Expr "]";
 -}
 
 eE (EPlus exp0 exp1) rhoV rhoF sto = (sto'', VInt (x + y)) where
@@ -162,10 +166,10 @@ eE (EDict (Ident dict) exp0) rhoV rhoF sto =
 
 -- Expressions with side effects.
 {-
-EPostInc. Expr2 ::= VarIdent "++";
-EPreInc.  Expr2 ::= "++" VarIdent;
-EPostDec. Expr2 ::= VarIdent "--";
-EPreDec.  Expr2 ::= "--" VarIdent;
+EPostInc. Expr2 ::= Ident "++";
+EPreInc.  Expr2 ::= "++" Ident;
+EPostDec. Expr2 ::= Ident "--";
+EPreDec.  Expr2 ::= "--" Ident;
 -}
 
 eE (EPostInc (Ident var)) rhoV rhoF sto =
@@ -205,7 +209,7 @@ BOr.    Expr ::= Expr "or" Expr1;
 BAnd.   Expr ::= Expr "and" Expr1;
 BXor.   Expr ::= Expr "xor" Expr1;
 
-BDictHasKey.  Expr2 ::= DictIdent "has" "key" "[" Expr "]";
+BDictHasKey.  Expr2 ::= Ident "has" "key" "[" Expr "]";
 -}
 
 eE (BTrue) rhoV rhoF sto = (sto, VBool True)
@@ -261,7 +265,7 @@ eE (BDictHasKey (Ident dict) exp0) rhoV rhoF sto =
 ------------------------------------------ INSTRUCTIONS -------------------------------------------
 -- Instructions include definitions and statements, so they can modify everything.
 -- StmtResult is either a store or a store and a value (returned from a return statement).
-iI :: Instr -> VEnv -> FEnv -> Store -> (FEnv, VEnv, StmtResult)
+iI :: Instr -> VEnv -> FEnv -> Store -> (VEnv, FEnv, StmtResult)
 
 {-
 ISeq.      Instr ::= Instr1 ";" Instr; -- right associative
@@ -270,67 +274,73 @@ Stmt.      Instr1 ::= Stmt;
 -}
 
 -- if first instruction returns a value, we don't execute the second one.
-iI (ISeq instr0 instr1) rhoF rhoV sto =
-    let (rhoF', rhoV', res) = iI instr0 rhoF rhoV sto in
+iI (ISeq instr0 instr1) rhoV rhoF sto =
+    let (rhoV', rhoF', res) = iI instr0 rhoV rhoF sto in
         case res of
-            StoreOnly sto' -> iI instr1 rhoF' rhoV' sto'
-            StoreAndValue sto' val -> (rhoF', rhoV', StoreAndValue sto' val)
+            StoreOnly sto' -> iI instr1 rhoV' rhoF' sto'
+            StoreAndValue sto' val -> (rhoV', rhoF', StoreAndValue sto' val)
+
+iI (Def def) rhoV rhoF sto =
+    let (rhoV', rhoF', sto') = iD def rhoV rhoF sto in
+        (rhoV', rhoF', StoreOnly sto')
+
+iI (Stmt stmt) rhoV rhoF sto = (rhoV, rhoF, iS stmt rhoV rhoF sto)
 
 
 -------------------------------VARIABLE DEFINITIONS------------------------------------------------
 -- Definitions also can modify everything.
-iD :: Def -> FEnv -> VEnv -> Store -> (FEnv, VEnv, Store)
+iD :: Def -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
 
 {-
-VarDef.        Def1 ::= SType VarIdent "=" Expr;
+VarDef.        Def1 ::= SType Ident "=" Expr;
 
-ArrDefInit.    Def1 ::= "Array" SType ArrIdent "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def1 ::= "Array" SType ArrIdent "[" Expr "]";
-DictDef.       Def1 ::= "Dict" SType DictIdent;
+ArrDefInit.    Def1 ::= "Array" SType Ident "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def1 ::= "Array" SType Ident "[" Expr "]";
+DictDef.       Def1 ::= "Dict" SType Ident;
 
 -- functions can also have local variables inside, so we allow declarations in the function body
-FuncDef.       Def1 ::= FType FuncIdent "(" Params ")" "{" Instr "}";
+FuncDef.       Def1 ::= FType Ident "(" Params ")" "{" Instr "}";
 -}
 
-iD (VarDef (TSimple stype) (Ident var) expr) rhoF rhoV sto =
+iD (VarDef stype (Ident var) expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
     let (loc, sto'') = newloc sto' in
     let rhoV' = mapSet rhoV var loc in
-        (rhoF, rhoV', setVarVal rhoV' sto'' var (SimpleVal val))
+        (rhoV', rhoF, setVarVal rhoV' sto'' var (SimpleVal val))
 
 -- Arrays can be initialized with both boolean or integer values. Size must be an integer.
-iD (ArrDefInit (TSimple stype) (Ident arr) exprSize exprInitVal) rhoF rhoV sto =
+iD (ArrDefInit stype (Ident arr) exprSize exprInitVal) rhoV rhoF sto =
     let (sto', VInt size) = eE exprSize rhoV rhoF sto in
     let (sto'', val) = eE exprInitVal rhoV rhoF sto' in
     let (loc, sto''') = newloc sto'' in
     let arrVal = replicate (fromInteger size) val in
     let rhoV' = mapSet rhoV arr loc in
-        (rhoF, rhoV', setVarVal rhoV' sto''' arr (ComplexVal (VArray arrVal)))
+        (rhoV', rhoF, setVarVal rhoV' sto''' arr (ComplexVal (VArray arrVal)))
 
 -- Now it's a bit tricky, because we need to know the type of the array to create it.
 -- Integer arrays are initialized with zeros, boolean arrays with False.
-iD (ArrDef (TSimple stype) (Ident arr) exprSize) rhoF rhoV sto =
+iD (ArrDef stype (Ident arr) exprSize) rhoV rhoF sto =
     let (sto', VInt size) = eE exprSize rhoV rhoF sto in
     let (loc, sto'') = newloc sto' in
     let arrVal = replicate (fromInteger size) (if stype == STInt then VInt 0 else VBool False) in
     let rhoV' = mapSet rhoV arr loc in
-        (rhoF, rhoV', setVarVal rhoV' sto'' arr (ComplexVal (VArray arrVal)))
+        (rhoV', rhoF, setVarVal rhoV' sto'' arr (ComplexVal (VArray arrVal)))
 
 -- Dictionaries are empty by default.
-iD (DictDef (TSimple stype) (Ident dict)) rhoF rhoV sto =
+iD (DictDef stype (Ident dict)) rhoV rhoF sto =
     let (loc, sto') = newloc sto in
     let rhoV' = mapSet rhoV dict loc in
-        (rhoF, rhoV', setVarVal rhoV' sto' dict (ComplexVal (VDict empty)))
+        (rhoV', rhoF, setVarVal rhoV' sto' dict (ComplexVal (VDict empty)))
 
 -- TODO add return value. x args sto' must be a (store, value) pair.
-iD (FuncDef ftype (Ident func) params instr) rhoF rhoV sto =
-    (mapSet rhoF func x, rhoV, sto) where
+iD (FuncDef ftype (Ident func) params instr) rhoV rhoF sto =
+    (rhoV, mapSet rhoF func x, sto) where
         x args sto' =
             let paramList = eP params in
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
             let rhoF''' = mapSet rhoF func x in -- now recursion makes sense
-            let (rhoF'''', rhoV''', StoreAndValue resSto resVal) = iI instr rhoV'' rhoF''' sto''' in
+            let (rhoV''', rhoF'''', StoreAndValue resSto resVal) = iI instr rhoV'' rhoF''' sto''' in
                 (resSto, resVal)
 
 ----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
@@ -363,25 +373,26 @@ eL (Lam ftype params instr) rhoV rhoF sto =
             let paramList = eP params in
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
-                iI instr rhoV'' rhoF'' sto''' -- recursion makes no sense in lambdas.
+            let (rhoF''', rhoV''', StoreAndValue resSto resVal) = iI instr rhoV'' rhoF'' sto''' in
+                (resSto, resVal)
 
 -- Parameters
 eP :: Params -> [FuncParam]
 
 {-
 ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= SType VarIdent;
+ParamVar.        Params ::= SType Ident;
 -- big decision here, in parameters we don't say exactly how the function looks like,
 -- we only specify what it returns.
-ParamFunc.       Params ::= FType FuncIdent;
-ParamVarMany.    Params ::= SType VarIdent "," Params;
-ParamFuncMany.   Params ::= FType FuncIdent "," Params;
+ParamFunc.       Params ::= FType Ident;
+ParamVarMany.    Params ::= SType Ident "," Params;
+ParamFuncMany.   Params ::= FType Ident "," Params;
 -}
 
 eP (ParamsNone) = []
-eP (ParamVar (TSimple stype) (Ident var)) = [PSimple stype (Ident var)]
+eP (ParamVar stype (Ident var)) = [PSimple stype (Ident var)]
 eP (ParamFunc ftype (Ident func)) = [PFunc ftype (Ident func)]
-eP (ParamVarMany (TSimple stype) (Ident var) params) = (PSimple stype (Ident var)) : eP params
+eP (ParamVarMany stype (Ident var) params) = (PSimple stype (Ident var)) : eP params
 eP (ParamFuncMany ftype (Ident func) params) = (PFunc ftype (Ident func)) : eP params
 
 ------------------------------------------ FUNCTION DEFINITIONS -----------------------------------
@@ -434,69 +445,82 @@ assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
 -- can also return a value, so we take that into account in the function type.
 data StmtResult = StoreOnly Store | StoreAndValue Store SimpleValue
 
-iS :: Stmt -> FEnv -> VEnv -> Store -> StmtResult
+iS :: Stmt -> VEnv -> FEnv -> Store -> StmtResult
 
 {-
 internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
 sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
 sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}";
 SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
-SFor.       Stmt1 ::= "for" "(" VarIdent "=" Expr "to" Expr ")" "{" Stmt "}";
+SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Stmt "}";
 -}
 
-iS (SIf bex i1 i2) rhoF rhoV sto =
+iS (SIf bex i1 i2) rhoV rhoF sto =
     let (sto', VBool b) = eE bex rhoV rhoF sto in
         if b then
-            iS i1 rhoF rhoV sto'
+            iS i1 rhoV rhoF sto'
         else
-            iS i2 rhoF rhoV sto'
+            iS i2 rhoV rhoF sto'
 
 -- TODO add break and continue. In loops there can also be a return statement, so the actual
 -- x takes Store and returns StmtResult.
-iS (SWhile bex i) rhoF rhoV sto = x sto where
+iS (SWhile bex i) rhoV rhoF sto = x sto where
     x st = let (st', VBool b) = eE bex rhoV rhoF st in
         if b then
-            let res = iS i rhoF rhoV st' in
+            let res = iS i rhoV rhoF st' in
                 case res of
                     StoreOnly sto' -> x sto'
                     StoreAndValue sto' val -> StoreAndValue sto' val
         else
             StoreOnly st'
 
--- We implement for using while above.
-iS (SFor (Ident var) exprFrom exprTo i) rhoF rhoV sto =
-    let (sto', VInt from) = eE exprFrom rhoV rhoF sto in
-    let (sto'', VInt to) = eE exprTo rhoV rhoF sto' in
-    let sto''' = setVarVal rhoV sto'' var (SimpleVal (VInt from)) in
-        iS (SWhile (ELt (VarVal (Ident var)) exprTo) (ISeq i (VarAssignPlus (Ident var) (ENum 1)))) rhoF rhoV sto'''
+iS (SFor (Ident var) exprFrom exprTo stmt) rhoV rhoF sto =
+    let
+        (sto', VInt from) = eE exprFrom rhoV rhoF sto
+        (sto'', VInt to) = eE exprTo rhoV rhoF sto'
+        (loc, sto''') = newloc sto''
+        rhoV' = mapSet rhoV var loc
+        sto'''' = setVarVal rhoV' sto''' var (SimpleVal (VInt from))
 
+        x st =
+            let SimpleVal (VInt i) = getVarVal rhoV' st var in
+            if i <= to then
+                let res = iS stmt rhoV' rhoF st in
+                    case res of
+                        StoreOnly sto' ->
+                            let st'' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1)))
+                            in x st''
+                        StoreAndValue sto' val -> StoreAndValue sto' val
+            else
+                StoreOnly st
+    in x sto''''
 
 
 {-
 SSkip.      Stmt1 ::= "skip";
 SReturn.    Stmt1 ::= "return" "(" Expr ")";
 SPrint.     Stmt1 ::= "print" "(" Expr ")";
-SSwap.      Stmt1 ::= "swap" "(" VarIdent "," VarIdent ")";
+SSwap.      Stmt1 ::= "swap" "(" Ident "," VarIdent ")";
 SBreak.     Stmt1 ::= "break" "(" Expr ")";
 SBreak1.    Stmt1 ::= "break";
 SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
 SContinue0. Stmt1 ::= "continue";
 -}
 
-iS (SSkip) rhoF rhoV sto = StoreOnly sto
+iS (SSkip) rhoV rhoF sto = StoreOnly sto
 
-iS (SReturn expr) rhoF rhoV sto =
+iS (SReturn expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
         StoreAndValue sto' val
 
 -- actually print the expression on the stdout
-iS (SPrint expr) rhoF rhoV sto =
-    let (sto', val) = eE expr rhoV rhoF sto in
-        putStrLn $ show val
-        StoreOnly sto'
+iS (SPrint expr) rhoV rhoF sto =
+    let (sto', val) = eE expr rhoV rhoF sto
+        _ = unsafePerformIO $ putStrLn $ show val
+    in StoreOnly sto'
 
 -- we don't modify the environment, so var -> loc mapping stays the same. Only the values change.
-iS (SSwap (Ident var1) (Ident var2)) rhoF rhoV sto =
+iS (SSwap (Ident var1) (Ident var2)) rhoV rhoF sto =
     let SimpleVal val1 = getVarVal rhoV sto var1 in
     let SimpleVal val2 = getVarVal rhoV sto var2 in
     let sto' = setVarVal rhoV sto var1 (SimpleVal val2) in
@@ -508,55 +532,55 @@ iS (SSwap (Ident var1) (Ident var2)) rhoF rhoV sto =
 -- Assigning variables.
 -- NOTE: x += f(args) calculates x first, then f, so if f modifies x, it will be unseen.
 {-
-VarAssign.         Stmt1 ::= VarIdent "=" Expr;
-VarAssignPlus.     Stmt1 ::= VarIdent "+=" Expr;
-VarAssignMinus.    Stmt1 ::= VarIdent "-=" Expr;
-VarAssignMul.      Stmt1 ::= VarIdent "*=" Expr;
-VarAssignDiv.      Stmt1 ::= VarIdent "/=" Expr;
-VarAssignMod.      Stmt1 ::= VarIdent "%=" Expr;
+VarAssign.         Stmt1 ::= Ident "=" Expr;
+VarAssignPlus.     Stmt1 ::= Ident "+=" Expr;
+VarAssignMinus.    Stmt1 ::= Ident "-=" Expr;
+VarAssignMul.      Stmt1 ::= Ident "*=" Expr;
+VarAssignDiv.      Stmt1 ::= Ident "/=" Expr;
+VarAssignMod.      Stmt1 ::= Ident "%=" Expr;
 
-ArrElSet.      Stmt1 ::= ArrIdent "[" Expr "]" "=" "(" Expr ")";
-DictElSet.     Stmt1 ::= DictIdent "set" "[" Expr "]" "to" "(" Expr ")";
+ArrElSet.      Stmt1 ::= Ident "[" Expr "]" "=" "(" Expr ")";
+DictElSet.     Stmt1 ::= Ident "set" "[" Expr "]" "to" "(" Expr ")";
 -}
 
-iS (VarAssign (Ident var) expr) rhoF rhoV sto =
+iS (VarAssign (Ident var) expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal val) in
         StoreOnly sto''
 
-iS (VarAssignPlus (Ident var) expr) rhoF rhoV sto =
+iS (VarAssignPlus (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x + y))) in
         StoreOnly sto''
 
-iS (VarAssignMinus (Ident var) expr) rhoF rhoV sto =
+iS (VarAssignMinus (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x - y))) in
         StoreOnly sto''
 
-iS (VarAssignMul (Ident var) expr) rhoF rhoV sto =
+iS (VarAssignMul (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x * y))) in
         StoreOnly sto''
 
 -- TODO add error handling
-iS (VarAssignDiv (Ident var) expr) rhoF rhoV sto =
+iS (VarAssignDiv (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `div` y))) in
         StoreOnly sto''
 
-iS (VarAssignMod (Ident var) expr) rhoF rhoV sto =
+iS (VarAssignMod (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `mod` y))) in
         StoreOnly sto''
 
-iS (ArrElSet (Ident arr) exprIndex exprVal) rhoF rhoV sto =
-    let VArray a = getVarVal rhoV sto arr in
+iS (ArrElSet (Ident arr) exprIndex exprVal) rhoV rhoF sto =
+    let ComplexVal (VArray a) = getVarVal rhoV sto arr in
     let (sto', VInt i) = eE exprIndex rhoV rhoF sto in
     let (sto'', val) = eE exprVal rhoV rhoF sto' in
     let a' = replaceNth a (fromInteger i) val in
@@ -564,8 +588,8 @@ iS (ArrElSet (Ident arr) exprIndex exprVal) rhoF rhoV sto =
         StoreOnly sto'''
 
 -- If the key is not in the dictionary, we add it. Otherwise we update the value.
-iS (DictElSet (Ident dict) exprIndex exprVal) rhoF rhoV sto =
-    let VDict d = getVarVal rhoV sto dict in
+iS (DictElSet (Ident dict) exprIndex exprVal) rhoV rhoF sto =
+    let ComplexVal (VDict d) = getVarVal rhoV sto dict in
     let (sto', VInt i) = eE exprIndex rhoV rhoF sto in
     let (sto'', val) = eE exprVal rhoV rhoF sto' in
     let d' = insert i val d in
@@ -581,7 +605,7 @@ iS (DictElSet (Ident dict) exprIndex exprVal) rhoF rhoV sto =
 
 
 
-
+-- Example usage of the interpreter
 main :: IO ()
 main = do
     getContents >>= compute
@@ -591,17 +615,21 @@ rhoF0:: FEnv
 rhoF0 = fromList []
 
 rhoV0:: VEnv
-rhoV0 = fromList [("x", 0), ("y", 1), ("z", 2)]
+rhoV0 = fromList []
 
 sto0:: Store
-sto0 = CStore (fromList [(0, 3), (1, 2), (2, 3)]) 3
+sto0 = CStore empty 0
 
 compute s =
-    case pStmt (myLexer s) of
+    case pInstr (myLexer s) of
         Left err -> do
             putStrLn "\nParse              Failed...\n"
             putStrLn err
             exitFailure
         Right e -> do
             putStrLn "\nParse Successful!"
-            putStrLn $ show (iS e rhoF0 rhoV0 sto0)
+            let (rhoF', rhoV', sto') = iI e rhoV0 rhoF0 sto0 in
+                case sto' of
+                    StoreOnly sto'' -> putStrLn $ show sto''
+                    -- Show store and the value returned from the return statement
+                    StoreAndValue sto'' val -> putStrLn $ show sto'' ++ " " ++ show val

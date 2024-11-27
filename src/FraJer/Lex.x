@@ -28,7 +28,7 @@ $u = [. \n]          -- universal: any character
 
 -- Symbols and non-identifier-like reserved words
 
-@rsyms = \+ | \- | \/ | \* | \% | \+ \+ | \- \- | \[ | \] | \( | \) | \= \= | \< \= | \> \= | \< | \> | \! \= | \! | \, | \- \> | \{ | \} | \: | \; | \= | \+ \= | \- \= | \* \= | \/ \= | \% \=
+@rsyms = \( | \) | \+ | \- | \/ | \* | \% | \+ \+ | \- \- | \[ | \] | \= \= | \< \= | \> \= | \< | \> | \! \= | \! | \, | \- \> | \{ | \} | \; | \= | \+ \= | \- \= | \* \= | \/ \= | \% \=
 
 :-
 
@@ -154,37 +154,37 @@ eitherResIdent tv s = treeFind resWords
 -- | The keywords and symbols of the language organized as binary search tree.
 resWords :: BTree
 resWords =
-  b "IntFunc" 32
-    (b "->" 16
-       (b "*=" 8
-          (b "%=" 4
-             (b "!=" 2 (b "!" 1 N N) (b "%" 3 N N))
-             (b ")" 6 (b "(" 5 N N) (b "*" 7 N N)))
-          (b "," 12
-             (b "++" 10 (b "+" 9 N N) (b "+=" 11 N N))
-             (b "--" 14 (b "-" 13 N N) (b "-=" 15 N N))))
-       (b "==" 24
-          (b ";" 20
-             (b "/=" 18 (b "/" 17 N N) (b ":" 19 N N))
-             (b "<=" 22 (b "<" 21 N N) (b "=" 23 N N)))
-          (b "Bool" 28
-             (b ">=" 26 (b ">" 25 N N) (b "Array" 27 N N))
-             (b "Dict" 30 (b "BoolFunc" 29 N N) (b "Int" 31 N N)))))
-    (b "lambda" 48
-       (b "disable" 40
-          (b "assignment" 36
-             (b "]" 34 (b "[" 33 N N) (b "and" 35 N N))
-             (b "continue" 38 (b "break" 37 N N) (b "debug" 39 N N)))
-          (b "for" 44
-             (b "enable" 42 (b "else" 41 N N) (b "false" 43 N N))
-             (b "if" 46 (b "has" 45 N N) (b "key" 47 N N))))
-       (b "skip" 56
-          (b "print" 52
-             (b "or" 50 (b "none" 49 N N) (b "outer" 51 N N))
-             (b "return" 54 (b "reading" 53 N N) (b "set" 55 N N)))
-          (b "while" 60
-             (b "to" 58 (b "swap" 57 N N) (b "true" 59 N N))
-             (b "{" 62 (b "xor" 61 N N) (b "}" 63 N N)))))
+  b "]" 33
+    (b "/" 17
+       (b "+" 9
+          (b "(" 5
+             (b "%" 3 (b "!=" 2 (b "!" 1 N N) N) (b "%=" 4 N N))
+             (b "*" 7 (b ")" 6 N N) (b "*=" 8 N N)))
+          (b "-" 13
+             (b "+=" 11 (b "++" 10 N N) (b "," 12 N N))
+             (b "-=" 15 (b "--" 14 N N) (b "->" 16 N N))))
+       (b ">=" 25
+          (b "<=" 21
+             (b ";" 19 (b "/=" 18 N N) (b "<" 20 N N))
+             (b "==" 23 (b "=" 22 N N) (b ">" 24 N N)))
+          (b "Dict" 29
+             (b "Bool" 27 (b "Array" 26 N N) (b "BoolFunc" 28 N N))
+             (b "IntFunc" 31 (b "Int" 30 N N) (b "[" 32 N N)))))
+    (b "none" 49
+       (b "enable" 41
+          (b "continue" 37
+             (b "assignment" 35 (b "and" 34 N N) (b "break" 36 N N))
+             (b "disable" 39 (b "debug" 38 N N) (b "else" 40 N N)))
+          (b "has" 45
+             (b "for" 43 (b "false" 42 N N) (b "get" 44 N N))
+             (b "key" 47 (b "if" 46 N N) (b "lambda" 48 N N))))
+       (b "swap" 57
+          (b "reading" 53
+             (b "outer" 51 (b "or" 50 N N) (b "print" 52 N N))
+             (b "set" 55 (b "return" 54 N N) (b "skip" 56 N N)))
+          (b "while" 61
+             (b "true" 59 (b "to" 58 N N) (b "void" 60 N N))
+             (b "{" 63 (b "xor" 62 N N) (b "}" 64 N N)))))
   where
   b s n = B bs (TS bs n)
     where

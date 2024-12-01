@@ -188,6 +188,7 @@ Instr1
   : Def { FraJer.Abs.IDef $1 }
   | Stmt { FraJer.Abs.IStmt $1 }
   | SpecStmt { FraJer.Abs.ISpecStmt $1 }
+  | Instr1 ';' { $1 }
 
 Def1 :: { FraJer.Abs.Def }
 Def1

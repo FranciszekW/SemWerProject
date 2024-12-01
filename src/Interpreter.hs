@@ -1,6 +1,5 @@
 -- TODOS:
 -- 1. Add error handling.
--- 2. Add continue and break statements to the language. They should work in while and for loops.
 -- 3. Rewrite everything using Monads (which hopefully will fix debugging).
 -- 4. Add static type checking.
 
@@ -401,8 +400,8 @@ iD (FuncDef ftype (Ident func) params instr) rhoV rhoF sto =
             let paramList = eP params in
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
-            let rhoF''' = mapSet rhoF func x in -- now recursion makes sense
-            let (rhoV''', rhoF'''', (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF''' sto''' in
+            let rhoF''' = mapSet rhoF'' func x in -- now recursion makes sense
+            let (_, _, (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF''' sto''' in
                 (resSto, resVal)
 
 ----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
@@ -435,7 +434,7 @@ eL (Lam ftype params instr) rhoV rhoF sto =
             let paramList = eP params in
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
-            let (rhoF''', rhoV''', (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF'' sto''' in
+            let (_, _, (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF'' sto''' in
                 (resSto, resVal)
 
 -- Parameters
@@ -605,7 +604,7 @@ iS (SFor (Ident var) exprFrom exprTo instr) rhoV rhoF sto =
                                 let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x rv' rf' st'
             else
                 (StoreOnly st, (0, False))
-    in x rhoV' rhoF sto'''
+    in x rhoV' rhoF sto''''
 
 {-
 SSkip.      Stmt1 ::= "skip";

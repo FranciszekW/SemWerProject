@@ -116,6 +116,7 @@ IStmt.      Instr1 ::= Stmt;
 ISpecStmt.  Instr1 ::= SpecStmt;
 
 _. Instr ::= Instr1;
+_. Instr1 ::= Instr1 ";";
 
 -- Grammar for defining variables and functions
 -- vardef ::= type Ident = Expr | Array type Ident "[" Ie "]" (Ie) | Array type Ident "[" e "]" | Dict type Ident

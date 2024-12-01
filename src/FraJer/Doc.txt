@@ -103,12 +103,15 @@ All other symbols are terminals.
   |  |  **|**  | //Instr1//
   | //Instr1// | -> | //Def//
   |  |  **|**  | //Stmt//
+  |  |  **|**  | //SpecStmt//
   | //Def1// | -> | //SType// //Ident// ``=`` //Expr//
   |  |  **|**  | //FType// //Ident// ``(`` //Params// ``)`` ``{`` //Instr// ``}``
   |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]`` ``(`` //Expr// ``)``
   |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]``
   |  |  **|**  | ``Dict`` //SType// //Ident//
   | //Def// | -> | //Def1//
+  | //Stmt// | -> | //Stmt1// ``,`` //Stmt//
+  |  |  **|**  | //Stmt1//
   | //Stmt1// | -> | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}`` ``else`` ``{`` //Stmt// ``}``
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
@@ -116,7 +119,6 @@ All other symbols are terminals.
   |  |  **|**  | ``skip``
   |  |  **|**  | ``return`` ``(`` //Expr// ``)``
   |  |  **|**  | ``print`` ``(`` //Expr// ``)``
-  |  |  **|**  | ``swap`` ``(`` //Ident// ``,`` //Ident// ``)``
   |  |  **|**  | ``break`` ``(`` //Expr// ``)``
   |  |  **|**  | ``break``
   |  |  **|**  | ``continue`` ``outer`` ``(`` //Expr// ``)``
@@ -129,11 +131,11 @@ All other symbols are terminals.
   |  |  **|**  | //Ident// ``%=`` //Expr//
   |  |  **|**  | //Ident// ``[`` //Expr// ``]`` ``=`` ``(`` //Expr// ``)``
   |  |  **|**  | //Ident// ``set`` ``[`` //Expr// ``]`` ``to`` ``(`` //Expr// ``)``
+  | //SpecStmt// | -> | ``swap`` ``(`` //Ident// ``,`` //Ident// ``)``
   |  |  **|**  | ``debug`` ``assignment`` ``enable`` //Ident//
   |  |  **|**  | ``debug`` ``assignment`` ``disable`` //Ident//
   |  |  **|**  | ``debug`` ``reading`` ``enable`` //Ident//
   |  |  **|**  | ``debug`` ``reading`` ``disable`` //Ident//
-  | //Stmt// | -> | //Stmt1//
 
 
 

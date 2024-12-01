@@ -65,7 +65,8 @@ data Params
 data Lambda = Lam FType Params Instr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Instr = ISeq Instr Instr | Def Def | Stmt Stmt
+data Instr
+    = ISeq Instr Instr | IDef Def | IStmt Stmt | ISpecStmt SpecStmt
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Def
@@ -77,13 +78,13 @@ data Def
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Stmt
-    = SIf Expr Stmt Stmt
+    = SSeq Stmt Stmt
+    | SIf Expr Stmt Stmt
     | SWhile Expr Stmt
     | SFor Ident Expr Expr Stmt
     | SSkip
     | SReturn Expr
     | SPrint Expr
-    | SSwap Ident Ident
     | SBreak Expr
     | SBreak1
     | SContinue Expr
@@ -96,6 +97,10 @@ data Stmt
     | VarAssignMod Ident Expr
     | ArrElSet Ident Expr Expr
     | DictElSet Ident Expr Expr
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data SpecStmt
+    = SSwap Ident Ident
     | DebugAssEnable Ident
     | DebugAssDisable Ident
     | DebugReadEnable Ident

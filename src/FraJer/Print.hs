@@ -202,8 +202,9 @@ instance Print FraJer.Abs.Lambda where
 instance Print FraJer.Abs.Instr where
   prt i = \case
     FraJer.Abs.ISeq instr1 instr2 -> prPrec i 0 (concatD [prt 1 instr1, doc (showString ";"), prt 0 instr2])
-    FraJer.Abs.Def def -> prPrec i 1 (concatD [prt 0 def])
-    FraJer.Abs.Stmt stmt -> prPrec i 1 (concatD [prt 0 stmt])
+    FraJer.Abs.IDef def -> prPrec i 1 (concatD [prt 0 def])
+    FraJer.Abs.IStmt stmt -> prPrec i 1 (concatD [prt 0 stmt])
+    FraJer.Abs.ISpecStmt specstmt -> prPrec i 1 (concatD [prt 0 specstmt])
 
 instance Print FraJer.Abs.Def where
   prt i = \case
@@ -215,13 +216,13 @@ instance Print FraJer.Abs.Def where
 
 instance Print FraJer.Abs.Stmt where
   prt i = \case
+    FraJer.Abs.SSeq stmt1 stmt2 -> prPrec i 0 (concatD [prt 1 stmt1, doc (showString ","), prt 0 stmt2])
     FraJer.Abs.SIf expr stmt1 stmt2 -> prPrec i 1 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt1, doc (showString "}"), doc (showString "else"), doc (showString "{"), prt 0 stmt2, doc (showString "}")])
     FraJer.Abs.SWhile expr stmt -> prPrec i 1 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
     FraJer.Abs.SFor id_ expr1 expr2 stmt -> prPrec i 1 (concatD [doc (showString "for"), doc (showString "("), prt 0 id_, doc (showString "="), prt 0 expr1, doc (showString "to"), prt 0 expr2, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
     FraJer.Abs.SSkip -> prPrec i 1 (concatD [doc (showString "skip")])
     FraJer.Abs.SReturn expr -> prPrec i 1 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
     FraJer.Abs.SPrint expr -> prPrec i 1 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")")])
-    FraJer.Abs.SSwap id_1 id_2 -> prPrec i 1 (concatD [doc (showString "swap"), doc (showString "("), prt 0 id_1, doc (showString ","), prt 0 id_2, doc (showString ")")])
     FraJer.Abs.SBreak expr -> prPrec i 1 (concatD [doc (showString "break"), doc (showString "("), prt 0 expr, doc (showString ")")])
     FraJer.Abs.SBreak1 -> prPrec i 1 (concatD [doc (showString "break")])
     FraJer.Abs.SContinue expr -> prPrec i 1 (concatD [doc (showString "continue"), doc (showString "outer"), doc (showString "("), prt 0 expr, doc (showString ")")])
@@ -234,7 +235,11 @@ instance Print FraJer.Abs.Stmt where
     FraJer.Abs.VarAssignMod id_ expr -> prPrec i 1 (concatD [prt 0 id_, doc (showString "%="), prt 0 expr])
     FraJer.Abs.ArrElSet id_ expr1 expr2 -> prPrec i 1 (concatD [prt 0 id_, doc (showString "["), prt 0 expr1, doc (showString "]"), doc (showString "="), doc (showString "("), prt 0 expr2, doc (showString ")")])
     FraJer.Abs.DictElSet id_ expr1 expr2 -> prPrec i 1 (concatD [prt 0 id_, doc (showString "set"), doc (showString "["), prt 0 expr1, doc (showString "]"), doc (showString "to"), doc (showString "("), prt 0 expr2, doc (showString ")")])
-    FraJer.Abs.DebugAssEnable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "enable"), prt 0 id_])
-    FraJer.Abs.DebugAssDisable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "disable"), prt 0 id_])
-    FraJer.Abs.DebugReadEnable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "enable"), prt 0 id_])
-    FraJer.Abs.DebugReadDisable id_ -> prPrec i 1 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "disable"), prt 0 id_])
+
+instance Print FraJer.Abs.SpecStmt where
+  prt i = \case
+    FraJer.Abs.SSwap id_1 id_2 -> prPrec i 0 (concatD [doc (showString "swap"), doc (showString "("), prt 0 id_1, doc (showString ","), prt 0 id_2, doc (showString ")")])
+    FraJer.Abs.DebugAssEnable id_ -> prPrec i 0 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "enable"), prt 0 id_])
+    FraJer.Abs.DebugAssDisable id_ -> prPrec i 0 (concatD [doc (showString "debug"), doc (showString "assignment"), doc (showString "disable"), prt 0 id_])
+    FraJer.Abs.DebugReadEnable id_ -> prPrec i 0 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "enable"), prt 0 id_])
+    FraJer.Abs.DebugReadDisable id_ -> prPrec i 0 (concatD [doc (showString "debug"), doc (showString "reading"), doc (showString "disable"), prt 0 id_])

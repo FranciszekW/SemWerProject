@@ -82,8 +82,9 @@ transLambda x = case x of
 transInstr :: FraJer.Abs.Instr -> Result
 transInstr x = case x of
   FraJer.Abs.ISeq instr1 instr2 -> failure x
-  FraJer.Abs.Def def -> failure x
-  FraJer.Abs.Stmt stmt -> failure x
+  FraJer.Abs.IDef def -> failure x
+  FraJer.Abs.IStmt stmt -> failure x
+  FraJer.Abs.ISpecStmt specstmt -> failure x
 
 transDef :: FraJer.Abs.Def -> Result
 transDef x = case x of
@@ -95,13 +96,13 @@ transDef x = case x of
 
 transStmt :: FraJer.Abs.Stmt -> Result
 transStmt x = case x of
+  FraJer.Abs.SSeq stmt1 stmt2 -> failure x
   FraJer.Abs.SIf expr stmt1 stmt2 -> failure x
   FraJer.Abs.SWhile expr stmt -> failure x
   FraJer.Abs.SFor ident expr1 expr2 stmt -> failure x
   FraJer.Abs.SSkip -> failure x
   FraJer.Abs.SReturn expr -> failure x
   FraJer.Abs.SPrint expr -> failure x
-  FraJer.Abs.SSwap ident1 ident2 -> failure x
   FraJer.Abs.SBreak expr -> failure x
   FraJer.Abs.SBreak1 -> failure x
   FraJer.Abs.SContinue expr -> failure x
@@ -114,6 +115,10 @@ transStmt x = case x of
   FraJer.Abs.VarAssignMod ident expr -> failure x
   FraJer.Abs.ArrElSet ident expr1 expr2 -> failure x
   FraJer.Abs.DictElSet ident expr1 expr2 -> failure x
+
+transSpecStmt :: FraJer.Abs.SpecStmt -> Result
+transSpecStmt x = case x of
+  FraJer.Abs.SSwap ident1 ident2 -> failure x
   FraJer.Abs.DebugAssEnable ident -> failure x
   FraJer.Abs.DebugAssDisable ident -> failure x
   FraJer.Abs.DebugReadEnable ident -> failure x

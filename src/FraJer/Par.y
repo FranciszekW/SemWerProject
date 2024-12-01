@@ -184,7 +184,10 @@ Instr :: { FraJer.Abs.Instr }
 Instr : Instr1 ';' Instr { FraJer.Abs.ISeq $1 $3 } | Instr1 { $1 }
 
 Instr1 :: { FraJer.Abs.Instr }
-Instr1 : Def { FraJer.Abs.Def $1 } | Stmt { FraJer.Abs.Stmt $1 }
+Instr1
+  : Def { FraJer.Abs.IDef $1 }
+  | Stmt { FraJer.Abs.IStmt $1 }
+  | SpecStmt { FraJer.Abs.ISpecStmt $1 }
 
 Def1 :: { FraJer.Abs.Def }
 Def1
@@ -197,6 +200,9 @@ Def1
 Def :: { FraJer.Abs.Def }
 Def : Def1 { $1 }
 
+Stmt :: { FraJer.Abs.Stmt }
+Stmt : Stmt1 ',' Stmt { FraJer.Abs.SSeq $1 $3 } | Stmt1 { $1 }
+
 Stmt1 :: { FraJer.Abs.Stmt }
 Stmt1
   : 'if' '(' Expr ')' '{' Stmt '}' 'else' '{' Stmt '}' { FraJer.Abs.sif1 $3 $6 $10 }
@@ -206,7 +212,6 @@ Stmt1
   | 'skip' { FraJer.Abs.SSkip }
   | 'return' '(' Expr ')' { FraJer.Abs.SReturn $3 }
   | 'print' '(' Expr ')' { FraJer.Abs.SPrint $3 }
-  | 'swap' '(' Ident ',' Ident ')' { FraJer.Abs.SSwap $3 $5 }
   | 'break' '(' Expr ')' { FraJer.Abs.SBreak $3 }
   | 'break' { FraJer.Abs.SBreak1 }
   | 'continue' 'outer' '(' Expr ')' { FraJer.Abs.SContinue $4 }
@@ -219,13 +224,14 @@ Stmt1
   | Ident '%=' Expr { FraJer.Abs.VarAssignMod $1 $3 }
   | Ident '[' Expr ']' '=' '(' Expr ')' { FraJer.Abs.ArrElSet $1 $3 $7 }
   | Ident 'set' '[' Expr ']' 'to' '(' Expr ')' { FraJer.Abs.DictElSet $1 $4 $8 }
+
+SpecStmt :: { FraJer.Abs.SpecStmt }
+SpecStmt
+  : 'swap' '(' Ident ',' Ident ')' { FraJer.Abs.SSwap $3 $5 }
   | 'debug' 'assignment' 'enable' Ident { FraJer.Abs.DebugAssEnable $4 }
   | 'debug' 'assignment' 'disable' Ident { FraJer.Abs.DebugAssDisable $4 }
   | 'debug' 'reading' 'enable' Ident { FraJer.Abs.DebugReadEnable $4 }
   | 'debug' 'reading' 'disable' Ident { FraJer.Abs.DebugReadDisable $4 }
-
-Stmt :: { FraJer.Abs.Stmt }
-Stmt : Stmt1 { $1 }
 
 {
 

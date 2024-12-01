@@ -1,3 +1,9 @@
+-- TODOS:
+-- 1. Add error handling.
+-- 2. Add continue and break statements to the language. They should work in while and for loops.
+-- 3. Rewrite everything using Monads (which hopefully will fix debugging).
+-- 4. Add static type checking.
+
 module Main where
 
 import Prelude
@@ -11,7 +17,8 @@ import Data.Map
 import qualified GHC.Integer (leInteger) 
 
 -- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( SType(..), FType(..), Ident(..), Expr(..), Args(..), Params(..), Instr(..), Def(..), Stmt(..), Lambda(..) )
+import FraJer.Abs   ( SType(..), FType(..), Ident(..), Expr(..), Args(..), Params(..),
+                      Instr(..), Def(..), Stmt(..), SpecStmt(..), Lambda(..) )
 import FraJer.Lex   ( Token, mkPosToken )
 import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
 import FraJer.Print ( Print, printTree )
@@ -72,28 +79,71 @@ type Func = [FuncArg] -> Store -> (Store, SimpleValue)
 
 ------------------------------------------ ENVIRONMENTS -------------------------------------------
 
-type Loc = Integer
 type Var = String
+type Loc = Integer
+type DebugFlag = Bool
+type BreakCount = Integer
+-- ContinueFlag is simply a bool, because continue outer n is equivalent to n breaks and then continue.
+type ContinueFlag = Bool
 
-type VEnv = Map Var Loc
+type ControlFlow = (BreakCount, ContinueFlag)
+
+-- One for assignment of a variable and one for reading a variable.
+type DebugFlags = (DebugFlag, DebugFlag)
+
+type VEnv = Map Var (Loc, DebugFlags)
 type FEnv = Map Var Func
 data Store = CStore {currMap :: Map Loc Value, nextLoc :: Loc} deriving Show
 
+data StmtResult = StoreOnly Store | StoreAndValue Store SimpleValue deriving Show
+type StmtState = (StmtResult, ControlFlow)
+
 ------------------------------------------ HELPER FUNCTIONS ---------------------------------------
+
+unsafePrint s = unsafePerformIO (putStrLn s) `seq` ()
 
 newloc:: Store -> (Loc, Store)
 newloc (CStore map loc) = (loc, CStore map (loc + 1))
 
+setVarLoc:: VEnv -> Var -> Loc -> VEnv
+setVarLoc rhoV var loc =
+    let (_, debugFlags) = mapGet rhoV var in
+        mapSet rhoV var (loc, debugFlags)
+
+-- in get VarVal we print the value if the read flag is set. At the end we return the value.
+-- but we need to check the flag and if its set, print the value AND return it.
 getVarVal:: VEnv -> Store -> Var -> Value
 getVarVal rhoV sto var =
-  let loc = mapGet rhoV var in
-    mapGet (currMap sto) loc
+    let (loc, (readFlag, _)) = mapGet rhoV var in
+    let val = mapGet (currMap sto) loc in
+        if readFlag then
+            unsafePrint ("Reading: " ++ show var ++ " = " ++ show val) `seq` val
+        else
+            val
 
+--getVarVal:: VEnv -> Store -> Var -> Value
+--getVarVal rhoV sto var =
+--  let loc = mapGet rhoV var in
+--    mapGet (currMap sto) loc
+
+-- in set VarVal we print the value if the write flag is set
+
+-- Similar to getVarVal, but we need to check the write flag and if its set, print the value.
+-- At the end we return the new store.
 setVarVal:: VEnv -> Store -> Var -> Value -> Store
 setVarVal rhoV sto var val =
-  let loc = mapGet rhoV var in
-  let map = mapSet (currMap sto) loc val in
-    CStore map (nextLoc sto)
+    let (loc, (_, writeFlag)) = mapGet rhoV var in
+    let map = mapSet (currMap sto) loc val in
+        if writeFlag then
+            unsafePrint ("Writing: " ++ show var ++ " = " ++ show val) `seq` CStore map (nextLoc sto)
+        else
+            CStore map (nextLoc sto)
+--
+--setVarVal:: VEnv -> Store -> Var -> Value -> Store
+--setVarVal rhoV sto var val =
+--  let loc = mapGet rhoV var in
+--  let map = mapSet (currMap sto) loc val in
+--    CStore map (nextLoc sto)
 
 replaceNth :: [a] -> Int -> a -> [a]
 replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) xs
@@ -265,26 +315,37 @@ eE (BDictHasKey (Ident dict) exp0) rhoV rhoF sto =
 ------------------------------------------ INSTRUCTIONS -------------------------------------------
 -- Instructions include definitions and statements, so they can modify everything.
 -- StmtResult is either a store or a store and a value (returned from a return statement).
-iI :: Instr -> VEnv -> FEnv -> Store -> (VEnv, FEnv, StmtResult)
+-- StmtState is a pair of StmtResult and ControlFlow, which is used in loops.
+iI :: Instr -> VEnv -> FEnv -> Store -> (VEnv, FEnv, StmtState)
 
 {-
 ISeq.      Instr ::= Instr1 ";" Instr; -- right associative
-Def.       Instr1 ::= Def;
-Stmt.      Instr1 ::= Stmt;
+IDef.       Instr1 ::= Def;
+IStmt.      Instr1 ::= Stmt;
+ISpecStmt.   Instr1 ::= SpecStmt;
 -}
 
 -- if first instruction returns a value, we don't execute the second one.
+-- Also, if any break or continue counter is greater than 0, we don't execute the second instruction.
 iI (ISeq instr0 instr1) rhoV rhoF sto =
-    let (rhoV', rhoF', res) = iI instr0 rhoV rhoF sto in
+    let (rhoV', rhoF', (res, (breakCount, continueFlag))) = iI instr0 rhoV rhoF sto in
         case res of
-            StoreOnly sto' -> iI instr1 rhoV' rhoF' sto'
-            StoreAndValue sto' val -> (rhoV', rhoF', StoreAndValue sto' val)
+            StoreAndValue sto' val -> (rhoV', rhoF', (StoreAndValue sto' val, (breakCount, continueFlag)))
+            StoreOnly sto' ->
+                if breakCount > 0 || continueFlag then
+                    (rhoV', rhoF', (StoreOnly sto', (breakCount, continueFlag)))
+                else
+                    iI instr1 rhoV' rhoF' sto'
 
-iI (Def def) rhoV rhoF sto =
+iI (IDef def) rhoV rhoF sto =
     let (rhoV', rhoF', sto') = iD def rhoV rhoF sto in
-        (rhoV', rhoF', StoreOnly sto')
+        (rhoV', rhoF', (StoreOnly sto', (0, False)))
 
-iI (Stmt stmt) rhoV rhoF sto = (rhoV, rhoF, iS stmt rhoV rhoF sto)
+iI (IStmt stmt) rhoV rhoF sto = (rhoV, rhoF, iS stmt rhoV rhoF sto)
+
+iI (ISpecStmt specStmt) rhoV rhoF sto =
+    let (rhoV', sto') = iSpecS specStmt rhoV rhoF sto in
+        (rhoV', rhoF, (StoreOnly sto', (0, False)))
 
 
 -------------------------------VARIABLE DEFINITIONS------------------------------------------------
@@ -305,7 +366,7 @@ FuncDef.       Def1 ::= FType Ident "(" Params ")" "{" Instr "}";
 iD (VarDef stype (Ident var) expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
     let (loc, sto'') = newloc sto' in
-    let rhoV' = mapSet rhoV var loc in
+    let rhoV' = mapSet rhoV var (loc, (False, False)) in
         (rhoV', rhoF, setVarVal rhoV' sto'' var (SimpleVal val))
 
 -- Arrays can be initialized with both boolean or integer values. Size must be an integer.
@@ -314,7 +375,7 @@ iD (ArrDefInit stype (Ident arr) exprSize exprInitVal) rhoV rhoF sto =
     let (sto'', val) = eE exprInitVal rhoV rhoF sto' in
     let (loc, sto''') = newloc sto'' in
     let arrVal = replicate (fromInteger size) val in
-    let rhoV' = mapSet rhoV arr loc in
+    let rhoV' = mapSet rhoV arr (loc, (False, False)) in
         (rhoV', rhoF, setVarVal rhoV' sto''' arr (ComplexVal (VArray arrVal)))
 
 -- Now it's a bit tricky, because we need to know the type of the array to create it.
@@ -323,13 +384,13 @@ iD (ArrDef stype (Ident arr) exprSize) rhoV rhoF sto =
     let (sto', VInt size) = eE exprSize rhoV rhoF sto in
     let (loc, sto'') = newloc sto' in
     let arrVal = replicate (fromInteger size) (if stype == STInt then VInt 0 else VBool False) in
-    let rhoV' = mapSet rhoV arr loc in
+    let rhoV' = mapSet rhoV arr (loc, (False, False)) in
         (rhoV', rhoF, setVarVal rhoV' sto'' arr (ComplexVal (VArray arrVal)))
 
 -- Dictionaries are empty by default.
 iD (DictDef stype (Ident dict)) rhoV rhoF sto =
     let (loc, sto') = newloc sto in
-    let rhoV' = mapSet rhoV dict loc in
+    let rhoV' = mapSet rhoV dict (loc, (False, False)) in
         (rhoV', rhoF, setVarVal rhoV' sto' dict (ComplexVal (VDict empty)))
 
 -- TODO add return value. x args sto' must be a (store, value) pair.
@@ -340,7 +401,7 @@ iD (FuncDef ftype (Ident func) params instr) rhoV rhoF sto =
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
             let rhoF''' = mapSet rhoF func x in -- now recursion makes sense
-            let (rhoV''', rhoF'''', StoreAndValue resSto resVal) = iI instr rhoV'' rhoF''' sto''' in
+            let (rhoV''', rhoF'''', (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF''' sto''' in
                 (resSto, resVal)
 
 ----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
@@ -373,7 +434,7 @@ eL (Lam ftype params instr) rhoV rhoF sto =
             let paramList = eP params in
             let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto' in
             let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto'' in
-            let (rhoF''', rhoV''', StoreAndValue resSto resVal) = iI instr rhoV'' rhoF'' sto''' in
+            let (rhoF''', rhoV''', (StoreAndValue resSto resVal, _)) = iI instr rhoV'' rhoF'' sto''' in
                 (resSto, resVal)
 
 -- Parameters
@@ -409,7 +470,7 @@ prepareEnvs [] rhoV rhoF sto = (rhoV, rhoF, sto)
 
 prepareEnvs ((PSimple stype (Ident var)):params) rhoV rhoF sto =
     let (loc, sto') = newloc sto in
-    let rhoV' = mapSet rhoV var loc in
+    let rhoV' = mapSet rhoV var (loc, (False, False)) in
         prepareEnvs params rhoV' rhoF sto'
 
 -- Since lambda can be the only functional-argument in our language, we can create a dummy function
@@ -443,9 +504,48 @@ assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
 ------------------------------------------ STATEMENTS ---------------------------------------------
 -- Statements do not modify the environment, but can modify the store. The return statement
 -- can also return a value, so we take that into account in the function type.
-data StmtResult = StoreOnly Store | StoreAndValue Store SimpleValue
 
-iS :: Stmt -> VEnv -> FEnv -> Store -> StmtResult
+iS :: Stmt -> VEnv -> FEnv -> Store -> StmtState
+
+-- Sequence of statements is also a statement.
+{-
+SSeq.      Stmt ::= Stmt1 ";" Stmt;
+-}
+
+-- We evaluate the first statement, then check if it returns a value. If not, we check
+-- the break and continue counters. If they are greater than 0, we don't execute the second statement.
+iS (SSeq stmt0 stmt1) rhoV rhoF sto =
+    let (res, (breakCount, continueFlag)) = iS stmt0 rhoV rhoF sto in
+        case res of
+            StoreAndValue sto' val -> (StoreAndValue sto' val, (0, False))
+            StoreOnly sto' ->
+                if breakCount > 0 || continueFlag then
+                    (StoreOnly sto', (breakCount, continueFlag))
+                else
+                    iS stmt1 rhoV rhoF sto'
+
+-- First, break and continue statements. They modify the control flow.
+-- break n means break n nested loops, continue outer n means first perform n breaks, then continue.
+{-
+SBreak.     Stmt1 ::= "break" "(" Expr ")";
+SBreak1.    Stmt1 ::= "break";
+SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
+SContinue0. Stmt1 ::= "continue";
+-}
+
+-- Statements should not get StoreAndValue as a argument, because the return statement
+-- should quit the function immediately.
+iS (SBreak exp0) rhoV rhoF sto =
+    let (sto', VInt n) = eE exp0 rhoV rhoF sto in
+        (StoreOnly sto', (n, False))
+
+iS (SBreak1) rhoV rhoF sto = (StoreOnly sto, (1, False))
+
+iS (SContinue exp0) rhoV rhoF sto =
+    let (sto', VInt n) = eE exp0 rhoV rhoF sto in
+        (StoreOnly sto', (n, True))
+
+iS (SContinue0) rhoV rhoF sto = (StoreOnly sto, (0, True))
 
 {-
 internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
@@ -455,46 +555,54 @@ SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
 SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Stmt "}";
 -}
 
-iS (SIf bex i1 i2) rhoV rhoF sto =
-    let (sto', VBool b) = eE bex rhoV rhoF sto in
+iS (SIf expr stmt0 stmt1) rhoV rhoF sto =
+    let (sto', VBool b) = eE expr rhoV rhoF sto in
         if b then
-            iS i1 rhoV rhoF sto'
+            iS stmt0 rhoV rhoF sto'
         else
-            iS i2 rhoV rhoF sto'
+            iS stmt1 rhoV rhoF sto'
 
--- TODO add break and continue. In loops there can also be a return statement, so the actual
--- x takes Store and returns StmtResult.
-iS (SWhile bex i) rhoV rhoF sto = x sto where
-    x st = let (st', VBool b) = eE bex rhoV rhoF st in
+iS (SWhile expr stmt) rhoV rhoF sto = x sto where
+    x st =
+        let (st', VBool b) = eE expr rhoV rhoF st in
         if b then
-            let res = iS i rhoV rhoF st' in
+            let (res, (breakCount, continueFlag)) = iS stmt rhoV rhoF st' in
                 case res of
-                    StoreOnly sto' -> x sto'
-                    StoreAndValue sto' val -> StoreAndValue sto' val
+                    StoreAndValue st'' val -> (StoreAndValue st'' val, (0, False))
+                    StoreOnly st'' ->
+                        if breakCount > 0 then
+                            (StoreOnly st'', (breakCount - 1, continueFlag))
+                        else if continueFlag then
+                            x st''
+                        else
+                            x st''
         else
-            StoreOnly st'
+            (StoreOnly st', (0, False))
 
 iS (SFor (Ident var) exprFrom exprTo stmt) rhoV rhoF sto =
     let
         (sto', VInt from) = eE exprFrom rhoV rhoF sto
         (sto'', VInt to) = eE exprTo rhoV rhoF sto'
         (loc, sto''') = newloc sto''
-        rhoV' = mapSet rhoV var loc
+        rhoV' = mapSet rhoV var (loc, (False, False))
         sto'''' = setVarVal rhoV' sto''' var (SimpleVal (VInt from))
 
         x st =
             let SimpleVal (VInt i) = getVarVal rhoV' st var in
             if i <= to then
-                let res = iS stmt rhoV' rhoF st in
+                let (res, (breakCount, continueFlag)) = iS stmt rhoV' rhoF st in
                     case res of
+                        StoreAndValue sto' val -> (StoreAndValue sto' val, (0, False))
                         StoreOnly sto' ->
-                            let st'' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1)))
-                            in x st''
-                        StoreAndValue sto' val -> StoreAndValue sto' val
+                            if breakCount > 0 then
+                                (StoreOnly sto', (breakCount - 1, continueFlag))
+                            else if continueFlag then
+                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x st'
+                            else
+                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x st'
             else
-                StoreOnly st
-    in x sto''''
-
+                (StoreOnly st, (0, False))
+    in x sto'''
 
 {-
 SSkip.      Stmt1 ::= "skip";
@@ -507,25 +615,17 @@ SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
 SContinue0. Stmt1 ::= "continue";
 -}
 
-iS (SSkip) rhoV rhoF sto = StoreOnly sto
+iS (SSkip) rhoV rhoF sto = (StoreOnly sto, (0, False))
 
 iS (SReturn expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
-        StoreAndValue sto' val
+        (StoreAndValue sto' val, (0, False))
 
 -- actually print the expression on the stdout
 iS (SPrint expr) rhoV rhoF sto =
-    let (sto', val) = eE expr rhoV rhoF sto
-        _ = unsafePerformIO $ putStrLn $ show val
-    in StoreOnly sto'
+    let (sto', val) = eE expr rhoV rhoF sto in
+        unsafePrint ("Printing: " ++ show val) `seq` (StoreOnly sto', (0, False))
 
--- we don't modify the environment, so var -> loc mapping stays the same. Only the values change.
-iS (SSwap (Ident var1) (Ident var2)) rhoV rhoF sto =
-    let SimpleVal val1 = getVarVal rhoV sto var1 in
-    let SimpleVal val2 = getVarVal rhoV sto var2 in
-    let sto' = setVarVal rhoV sto var1 (SimpleVal val2) in
-    let sto'' = setVarVal rhoV sto' var2 (SimpleVal val1) in
-        StoreOnly sto''
 
 -- TODO implement break and continue using additional flags.
 
@@ -546,38 +646,38 @@ DictElSet.     Stmt1 ::= Ident "set" "[" Expr "]" "to" "(" Expr ")";
 iS (VarAssign (Ident var) expr) rhoV rhoF sto =
     let (sto', val) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal val) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 iS (VarAssignPlus (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x + y))) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 iS (VarAssignMinus (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x - y))) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 iS (VarAssignMul (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x * y))) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 -- TODO add error handling
 iS (VarAssignDiv (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `div` y))) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 iS (VarAssignMod (Ident var) expr) rhoV rhoF sto =
     let SimpleVal (VInt x) = getVarVal rhoV sto var in
     let (sto', VInt y) = eE expr rhoV rhoF sto in
     let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `mod` y))) in
-        StoreOnly sto''
+        (StoreOnly sto'', (0, False))
 
 iS (ArrElSet (Ident arr) exprIndex exprVal) rhoV rhoF sto =
     let ComplexVal (VArray a) = getVarVal rhoV sto arr in
@@ -585,7 +685,7 @@ iS (ArrElSet (Ident arr) exprIndex exprVal) rhoV rhoF sto =
     let (sto'', val) = eE exprVal rhoV rhoF sto' in
     let a' = replaceNth a (fromInteger i) val in
     let sto''' = setVarVal rhoV sto'' arr (ComplexVal (VArray a')) in
-        StoreOnly sto'''
+        (StoreOnly sto''', (0, False))
 
 -- If the key is not in the dictionary, we add it. Otherwise we update the value.
 iS (DictElSet (Ident dict) exprIndex exprVal) rhoV rhoF sto =
@@ -594,10 +694,50 @@ iS (DictElSet (Ident dict) exprIndex exprVal) rhoV rhoF sto =
     let (sto'', val) = eE exprVal rhoV rhoF sto' in
     let d' = insert i val d in
     let sto''' = setVarVal rhoV sto'' dict (ComplexVal (VDict d')) in
-        StoreOnly sto'''
+        (StoreOnly sto''', (0, False))
 
+-------------------------------------SPECIAL STATEMENTS--------------------------------------------
+-- Special statements can modify the VEnv (setting debug flags) or the store (swapping variables).
+-- There is no function swapping for now, so FEnv is not modified.
+iSpecS :: SpecStmt -> VEnv -> FEnv -> Store -> (VEnv, Store)
 
+{-
+SSwap.              SpecStmt ::= "swap" "(" Ident "," Ident ")";
+DebugAssEnable.     SpecStmt ::= "debug" "assignment" "enable" Ident;      -- ;)
+DebugAssDisable.    SpecStmt ::= "debug" "assignment" "disable" Ident;
+DebugReadEnable.    SpecStmt ::= "debug" "reading" "enable" Ident;
+DebugReadDisable.   SpecStmt ::= "debug" "reading" "disable" Ident;
+-}
 
+-- Swapping does NOT swap the debugging flags. It only swaps the locations in the store.
+-- It does not swap the values associated with the locations, it swaps locations themselves.
+-- we can use setVarLoc to change the location of the variable.
+iSpecS (SSwap (Ident var1) (Ident var2)) rhoV rhoF sto =
+    let (loc1, _) = mapGet rhoV var1 in
+    let (loc2, _) = mapGet rhoV var2 in
+    let rhoV' = setVarLoc rhoV var1 loc2 in
+    let rhoV'' = setVarLoc rhoV' var2 loc1 in
+        (rhoV'', sto)
+
+iSpecS (DebugAssEnable (Ident var)) rhoV rhoF sto =
+    let (loc, (readFlag, _)) = mapGet rhoV var in
+    let rhoV' = mapSet rhoV var (loc, (readFlag, True)) in
+        (rhoV', sto)
+
+iSpecS (DebugAssDisable (Ident var)) rhoV rhoF sto =
+    let (loc, (readFlag, _)) = mapGet rhoV var in
+    let rhoV' = mapSet rhoV var (loc, (readFlag, False)) in
+        (rhoV', sto)
+
+iSpecS (DebugReadEnable (Ident var)) rhoV rhoF sto =
+    let (loc, (_, writeFlag)) = mapGet rhoV var in
+    let rhoV' = mapSet rhoV var (loc, (True, writeFlag)) in
+        (rhoV', sto)
+
+iSpecS (DebugReadDisable (Ident var)) rhoV rhoF sto =
+    let (loc, (_, writeFlag)) = mapGet rhoV var in
+    let rhoV' = mapSet rhoV var (loc, (False, writeFlag)) in
+        (rhoV', sto)
 
 
 
@@ -620,6 +760,7 @@ rhoV0 = fromList []
 sto0:: Store
 sto0 = CStore empty 0
 
+-- After computations we print the VEnv and the Store.
 compute s =
     case pInstr (myLexer s) of
         Left err -> do
@@ -628,8 +769,10 @@ compute s =
             exitFailure
         Right e -> do
             putStrLn "\nParse Successful!"
-            let (rhoF', rhoV', sto') = iI e rhoV0 rhoF0 sto0 in
-                case sto' of
-                    StoreOnly sto'' -> putStrLn $ show sto''
-                    -- Show store and the value returned from the return statement
-                    StoreAndValue sto'' val -> putStrLn $ show sto'' ++ " " ++ show val
+            let (rhoV', rhoF', res) = iI e rhoV0 rhoF0 sto0
+            rhoV' `seq` rhoF' `seq` res `seq` do -- Sequential evaluation makes the print work correctly (before the end of computation)
+                putStrLn "\nEnd of computation"
+                putStrLn "\nVEnv:"
+                putStrLn $ show rhoV'
+                putStrLn "\nStore:"
+                putStrLn $ show res

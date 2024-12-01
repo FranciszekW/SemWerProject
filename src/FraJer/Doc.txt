@@ -110,12 +110,10 @@ All other symbols are terminals.
   |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]``
   |  |  **|**  | ``Dict`` //SType// //Ident//
   | //Def// | -> | //Def1//
-  | //Stmt// | -> | //Stmt1// ``,`` //Stmt//
-  |  |  **|**  | //Stmt1//
-  | //Stmt1// | -> | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}`` ``else`` ``{`` //Stmt// ``}``
-  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
-  |  |  **|**  | ``while`` ``(`` //Expr// ``)`` ``{`` //Stmt// ``}``
-  |  |  **|**  | ``for`` ``(`` //Ident// ``=`` //Expr// ``to`` //Expr// ``)`` ``{`` //Stmt// ``}``
+  | //Stmt1// | -> | ``if`` ``(`` //Expr// ``)`` ``{`` //Instr// ``}`` ``else`` ``{`` //Instr// ``}``
+  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` ``{`` //Instr// ``}``
+  |  |  **|**  | ``while`` ``(`` //Expr// ``)`` ``{`` //Instr// ``}``
+  |  |  **|**  | ``for`` ``(`` //Ident// ``=`` //Expr// ``to`` //Expr// ``)`` ``{`` //Instr// ``}``
   |  |  **|**  | ``skip``
   |  |  **|**  | ``return`` ``(`` //Expr// ``)``
   |  |  **|**  | ``print`` ``(`` //Expr// ``)``
@@ -131,6 +129,7 @@ All other symbols are terminals.
   |  |  **|**  | //Ident// ``%=`` //Expr//
   |  |  **|**  | //Ident// ``[`` //Expr// ``]`` ``=`` ``(`` //Expr// ``)``
   |  |  **|**  | //Ident// ``set`` ``[`` //Expr// ``]`` ``to`` ``(`` //Expr// ``)``
+  | //Stmt// | -> | //Stmt1//
   | //SpecStmt// | -> | ``swap`` ``(`` //Ident// ``,`` //Ident// ``)``
   |  |  **|**  | ``debug`` ``assignment`` ``enable`` //Ident//
   |  |  **|**  | ``debug`` ``assignment`` ``disable`` //Ident//

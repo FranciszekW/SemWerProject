@@ -139,19 +139,17 @@ _. Def ::= Def1;
 --            | d [e] set (e1) | a [e] = e1
 -- D ::= debug assignment enable x | debug assignment disable x | debug reading enable x | debug reading disable x
 
-SSeq.       Stmt ::= Stmt1 "," Stmt;
-
 -- We use this to declare a general form of expression, but parse it
 -- differently.
-internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}";
-SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
-SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Stmt "}";
+internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}";
+SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Instr "}";
+SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Instr "}";
 
 
 define sif1 b1 i1 i2 = SIf b1 i1 i2;
-define sif2 b1 i1  = SIf b1 i1 SSkip;
+define sif2 b1 i1  = SIf b1 i1 (IStmt SSkip);
 
 SSkip.      Stmt1 ::= "skip";
 SReturn.    Stmt1 ::= "return" "(" Expr ")";

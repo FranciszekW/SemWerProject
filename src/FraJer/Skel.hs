@@ -96,10 +96,9 @@ transDef x = case x of
 
 transStmt :: FraJer.Abs.Stmt -> Result
 transStmt x = case x of
-  FraJer.Abs.SSeq stmt1 stmt2 -> failure x
-  FraJer.Abs.SIf expr stmt1 stmt2 -> failure x
-  FraJer.Abs.SWhile expr stmt -> failure x
-  FraJer.Abs.SFor ident expr1 expr2 stmt -> failure x
+  FraJer.Abs.SIf expr instr1 instr2 -> failure x
+  FraJer.Abs.SWhile expr instr -> failure x
+  FraJer.Abs.SFor ident expr1 expr2 instr -> failure x
   FraJer.Abs.SSkip -> failure x
   FraJer.Abs.SReturn expr -> failure x
   FraJer.Abs.SPrint expr -> failure x

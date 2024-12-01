@@ -78,10 +78,9 @@ data Def
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Stmt
-    = SSeq Stmt Stmt
-    | SIf Expr Stmt Stmt
-    | SWhile Expr Stmt
-    | SFor Ident Expr Expr Stmt
+    = SIf Expr Instr Instr
+    | SWhile Expr Instr
+    | SFor Ident Expr Expr Instr
     | SSkip
     | SReturn Expr
     | SPrint Expr
@@ -107,11 +106,11 @@ data SpecStmt
     | DebugReadDisable Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-sif1 :: Expr -> Stmt -> Stmt -> Stmt
+sif1 :: Expr -> Instr -> Instr -> Stmt
 sif1 = \ b1 i1 i2 -> SIf b1 i1 i2
 
-sif2 :: Expr -> Stmt -> Stmt
-sif2 = \ b1 i1 -> SIf b1 i1 SSkip
+sif2 :: Expr -> Instr -> Stmt
+sif2 = \ b1 i1 -> SIf b1 i1 (IStmt SSkip)
 
 newtype Ident = Ident String
   deriving (C.Eq, C.Ord, C.Show, C.Read, Data.String.IsString)

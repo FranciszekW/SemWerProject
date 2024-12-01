@@ -216,10 +216,9 @@ instance Print FraJer.Abs.Def where
 
 instance Print FraJer.Abs.Stmt where
   prt i = \case
-    FraJer.Abs.SSeq stmt1 stmt2 -> prPrec i 0 (concatD [prt 1 stmt1, doc (showString ","), prt 0 stmt2])
-    FraJer.Abs.SIf expr stmt1 stmt2 -> prPrec i 1 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt1, doc (showString "}"), doc (showString "else"), doc (showString "{"), prt 0 stmt2, doc (showString "}")])
-    FraJer.Abs.SWhile expr stmt -> prPrec i 1 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
-    FraJer.Abs.SFor id_ expr1 expr2 stmt -> prPrec i 1 (concatD [doc (showString "for"), doc (showString "("), prt 0 id_, doc (showString "="), prt 0 expr1, doc (showString "to"), prt 0 expr2, doc (showString ")"), doc (showString "{"), prt 0 stmt, doc (showString "}")])
+    FraJer.Abs.SIf expr instr1 instr2 -> prPrec i 1 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 instr1, doc (showString "}"), doc (showString "else"), doc (showString "{"), prt 0 instr2, doc (showString "}")])
+    FraJer.Abs.SWhile expr instr -> prPrec i 1 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
+    FraJer.Abs.SFor id_ expr1 expr2 instr -> prPrec i 1 (concatD [doc (showString "for"), doc (showString "("), prt 0 id_, doc (showString "="), prt 0 expr1, doc (showString "to"), prt 0 expr2, doc (showString ")"), doc (showString "{"), prt 0 instr, doc (showString "}")])
     FraJer.Abs.SSkip -> prPrec i 1 (concatD [doc (showString "skip")])
     FraJer.Abs.SReturn expr -> prPrec i 1 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
     FraJer.Abs.SPrint expr -> prPrec i 1 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")")])

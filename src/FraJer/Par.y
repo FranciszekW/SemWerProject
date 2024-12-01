@@ -200,15 +200,12 @@ Def1
 Def :: { FraJer.Abs.Def }
 Def : Def1 { $1 }
 
-Stmt :: { FraJer.Abs.Stmt }
-Stmt : Stmt1 ',' Stmt { FraJer.Abs.SSeq $1 $3 } | Stmt1 { $1 }
-
 Stmt1 :: { FraJer.Abs.Stmt }
 Stmt1
-  : 'if' '(' Expr ')' '{' Stmt '}' 'else' '{' Stmt '}' { FraJer.Abs.sif1 $3 $6 $10 }
-  | 'if' '(' Expr ')' '{' Stmt '}' { FraJer.Abs.sif2 $3 $6 }
-  | 'while' '(' Expr ')' '{' Stmt '}' { FraJer.Abs.SWhile $3 $6 }
-  | 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Stmt '}' { FraJer.Abs.SFor $3 $5 $7 $10 }
+  : 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}' { FraJer.Abs.sif1 $3 $6 $10 }
+  | 'if' '(' Expr ')' '{' Instr '}' { FraJer.Abs.sif2 $3 $6 }
+  | 'while' '(' Expr ')' '{' Instr '}' { FraJer.Abs.SWhile $3 $6 }
+  | 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}' { FraJer.Abs.SFor $3 $5 $7 $10 }
   | 'skip' { FraJer.Abs.SSkip }
   | 'return' '(' Expr ')' { FraJer.Abs.SReturn $3 }
   | 'print' '(' Expr ')' { FraJer.Abs.SPrint $3 }
@@ -224,6 +221,9 @@ Stmt1
   | Ident '%=' Expr { FraJer.Abs.VarAssignMod $1 $3 }
   | Ident '[' Expr ']' '=' '(' Expr ')' { FraJer.Abs.ArrElSet $1 $3 $7 }
   | Ident 'set' '[' Expr ']' 'to' '(' Expr ')' { FraJer.Abs.DictElSet $1 $4 $8 }
+
+Stmt :: { FraJer.Abs.Stmt }
+Stmt : Stmt1 { $1 }
 
 SpecStmt :: { FraJer.Abs.SpecStmt }
 SpecStmt

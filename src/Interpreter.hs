@@ -8,6 +8,7 @@ module Main where
 
 import Prelude
 
+import System.IO (readFile)
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
 import System.IO.Unsafe   ( unsafePerformIO )
@@ -514,15 +515,15 @@ SSeq.      Stmt ::= Stmt1 ";" Stmt;
 
 -- We evaluate the first statement, then check if it returns a value. If not, we check
 -- the break and continue counters. If they are greater than 0, we don't execute the second statement.
-iS (SSeq stmt0 stmt1) rhoV rhoF sto =
-    let (res, (breakCount, continueFlag)) = iS stmt0 rhoV rhoF sto in
-        case res of
-            StoreAndValue sto' val -> (StoreAndValue sto' val, (0, False))
-            StoreOnly sto' ->
-                if breakCount > 0 || continueFlag then
-                    (StoreOnly sto', (breakCount, continueFlag))
-                else
-                    iS stmt1 rhoV rhoF sto'
+--iS (SSeq stmt0 stmt1) rhoV rhoF sto =
+--    let (res, (breakCount, continueFlag)) = iS stmt0 rhoV rhoF sto in
+--        case res of
+--            StoreAndValue sto' val -> (StoreAndValue sto' val, (0, False))
+--            StoreOnly sto' ->
+--                if breakCount > 0 || continueFlag then
+--                    (StoreOnly sto', (breakCount, continueFlag))
+--                else
+--                    iS stmt1 rhoV rhoF sto'
 
 -- First, break and continue statements. They modify the control flow.
 -- break n means break n nested loops, continue outer n means first perform n breaks, then continue.
@@ -548,38 +549,40 @@ iS (SContinue exp0) rhoV rhoF sto =
 iS (SContinue0) rhoV rhoF sto = (StoreOnly sto, (0, True))
 
 {-
-internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}" "else" "{" Stmt "}";
-sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Stmt "}";
-SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Stmt "}";
-SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Stmt "}";
+internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
+sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}";
+SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Instr "}";
+SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Instr "}";
 -}
 
-iS (SIf expr stmt0 stmt1) rhoV rhoF sto =
+iS (SIf expr i0 i1) rhoV rhoF sto =
     let (sto', VBool b) = eE expr rhoV rhoF sto in
         if b then
-            iS stmt0 rhoV rhoF sto'
+            let (_, _, res) = iI i0 rhoV rhoF sto' in
+                res
         else
-            iS stmt1 rhoV rhoF sto'
+            let (_, _, res) = iI i1 rhoV rhoF sto' in
+                res
 
-iS (SWhile expr stmt) rhoV rhoF sto = x sto where
-    x st =
+iS (SWhile expr i) rhoV rhoF sto = x rhoV rhoF sto where
+    x rv rf st =
         let (st', VBool b) = eE expr rhoV rhoF st in
         if b then
-            let (res, (breakCount, continueFlag)) = iS stmt rhoV rhoF st' in
+            let (rv', rf', (res, (breakCount, continueFlag))) = iI i rv rf st' in
                 case res of
                     StoreAndValue st'' val -> (StoreAndValue st'' val, (0, False))
                     StoreOnly st'' ->
                         if breakCount > 0 then
                             (StoreOnly st'', (breakCount - 1, continueFlag))
                         else if continueFlag then
-                            x st''
+                            x rv' rf' st''
                         else
-                            x st''
+                            x rv' rf' st''
         else
             (StoreOnly st', (0, False))
 
-iS (SFor (Ident var) exprFrom exprTo stmt) rhoV rhoF sto =
+iS (SFor (Ident var) exprFrom exprTo instr) rhoV rhoF sto =
     let
         (sto', VInt from) = eE exprFrom rhoV rhoF sto
         (sto'', VInt to) = eE exprTo rhoV rhoF sto'
@@ -587,22 +590,22 @@ iS (SFor (Ident var) exprFrom exprTo stmt) rhoV rhoF sto =
         rhoV' = mapSet rhoV var (loc, (False, False))
         sto'''' = setVarVal rhoV' sto''' var (SimpleVal (VInt from))
 
-        x st =
+        x rv rf st =
             let SimpleVal (VInt i) = getVarVal rhoV' st var in
             if i <= to then
-                let (res, (breakCount, continueFlag)) = iS stmt rhoV' rhoF st in
+                let (rv', rf', (res, (breakCount, continueFlag))) = iI instr rv rf st in
                     case res of
                         StoreAndValue sto' val -> (StoreAndValue sto' val, (0, False))
                         StoreOnly sto' ->
                             if breakCount > 0 then
                                 (StoreOnly sto', (breakCount - 1, continueFlag))
                             else if continueFlag then
-                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x st'
+                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x rv' rf' st'
                             else
-                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x st'
+                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x rv' rf' st'
             else
                 (StoreOnly st, (0, False))
-    in x sto'''
+    in x rhoV' rhoF sto'''
 
 {-
 SSkip.      Stmt1 ::= "skip";
@@ -768,11 +771,18 @@ compute s =
             putStrLn err
             exitFailure
         Right e -> do
-            putStrLn "\nParse Successful!"
+            putStrLn "\nParse Successful!\n"
             let (rhoV', rhoF', res) = iI e rhoV0 rhoF0 sto0
             rhoV' `seq` rhoF' `seq` res `seq` do -- Sequential evaluation makes the print work correctly (before the end of computation)
                 putStrLn "\nEnd of computation"
-                putStrLn "\nVEnv:"
-                putStrLn $ show rhoV'
-                putStrLn "\nStore:"
-                putStrLn $ show res
+--                putStrLn "\nVEnv:"
+--                putStrLn $ show rhoV'
+--                putStrLn "\nStore:"
+--                putStrLn $ show res
+
+
+-- Definicja funkcji
+processFile path = do
+    content <- readFile path
+    let strippedContent = Prelude.filter (/= '\n') content
+    compute strippedContent

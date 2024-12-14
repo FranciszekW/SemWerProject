@@ -1,4 +1,6 @@
 -- TODOS:
+-- 1. Add error handling.
+-- 3. Rewrite everything using Monads (which hopefully will fix debugging).
 -- 4. Add static type checking.
 
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,11 +14,11 @@ import System.IO (readFile)
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
 import System.IO.Unsafe   ( unsafePerformIO )
-import Control.Monad      ( when, ap, liftM )
-import Control.Monad.Reader ( Reader, ReaderT, MonadReader, MonadIO, runReader, runReaderT, ask, local, liftIO, ap, liftM, lift )
-import Control.Monad.State  ( State, StateT, MonadState, MonadIO, evalState, evalStateT, get, put, liftIO, ap, liftM, lift )
-import Control.Monad.Except ( ExceptT, MonadError, MonadIO, runExceptT, throwError, catchError, liftIO, ap, liftM, lift )
-import Control.Monad.Identity ( Identity, runIdentity, ap, liftM )
+import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Except
+import Control.Monad.Identity 
 
 
 import Data.Map
@@ -52,10 +54,6 @@ data FuncParam = PSimple SType Ident | PFunc FType Ident deriving (Show, Eq)
 -- Function types (can take functions as arguments, but return only simple types)
 data DetailedFuncType = DetFunc [FuncParam] SType deriving (Show, Eq)
 
-typeof :: SimpleValue -> Type
-typeof (VInt _) = SType
-typeof (VBool _) = SType
-
 ------------------------------------------ DATATYPES ----------------------------------------------
 
 -- Simple values (Int, Bool)
@@ -90,26 +88,23 @@ type Func = [FuncArg] -> Store -> MyExprMonad
 data Error =  DivByZero
             | ModByZero
             | KeyNotInDict DictKey
-            | FunctionNotInScope Ident
             | IndexOutOfBounds Integer
             | InvalidArraySize Integer
             | InvalidBreakArgument Integer
             | InvalidContinueArgument Integer
             | TypeMismatch Type Type
             | VariableNotDefined Ident
-            | CustomError String
 
 instance Show Error where
-    show DivByZero = "Division by zero"
-    show ModByZero = "Modulo by zero"
-    show (KeyNotInDict k) = "Key " ++ show k ++ " not in dictionary"
-    show (FunctionNotInScope (Ident f)) = "Function " ++ f ++ " not in scope"
-    show (IndexOutOfBounds i) = "Index " ++ show i ++ " out of bounds"
-    show (InvalidArraySize s) = "Invalid array size: " ++ show s
-    show (InvalidBreakArgument n) = "Invalid break argument: " ++ show n
-    show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
-    show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
-    show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
+  show DivByZero = "Division by zero"
+  show ModByZero = "Modulo by zero"
+  show (KeyNotInDict k) = "Key " ++ show k ++ " not in dictionary"
+  show (IndexOutOfBounds i) = "Index " ++ show i ++ " out of bounds"
+  show (InvalidArraySize s) = "Invalid array size: " ++ show s
+  show (InvalidBreakArgument n) = "Invalid break argument: " ++ show n
+  show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
+  show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
+  show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
 
 ------------------------------------------ ENVIRONMENTS -------------------------------------------
 
@@ -136,40 +131,31 @@ type StmtState = (StmtResult, ControlFlow)
 ------------------------------------------ MONADS -------------------------------------------------
 
 type MyExprMonad = Either Error (Store, SimpleValue)
-type MFunc = [FuncArg] -> WorkingMonad (SimpleValue)
+
+newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) (IO))) a }
+type FuncMonad = ExceptT Error (StateT (Store, ControlFlow) (IO))
+type MFunc = [FuncArg] -> WorkingMonad(SimpleValue)
 type FMEnv = Map Var MFunc
 
-newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
-
 instance MonadState (Store, ControlFlow) WorkingMonad where
-    get = WorkingMonad $ lift get
-    put = WorkingMonad . lift . put
-
-instance MonadError Error WorkingMonad where
-    throwError = WorkingMonad . throwError
-    catchError (WorkingMonad action) handler =
-        WorkingMonad $ catchError action (runWorkingMonad . handler)
+    get = WorkingMonad $ ExceptT $ ReaderT $ \(_, _) -> StateT $ \s -> (s, s)
+    put s = WorkingMonad $ ExceptT $ ReaderT $ \(_, _) -> StateT $ \_ -> ((), s)
 
 instance MonadReader (VEnv, FMEnv) WorkingMonad where
-    ask = WorkingMonad ask
-    local f (WorkingMonad action) = WorkingMonad $ local f action
+    ask = WorkingMonad $ ExceptT $ ReaderT $ \env -> return (Right (env, env))
+    local f (WorkingMonad m) = WorkingMonad $ ExceptT $ ReaderT $ \env -> runExceptT (runReaderT m (f env))
 
-instance Functor WorkingMonad where
-    fmap = liftM
+instance MonadError Error WorkingMonad where
+    throwError e = WorkingMonad $ ExceptT $ ReaderT $ \_ -> StateT $ \_ -> (Left e, ())
 
-instance Applicative WorkingMonad where
-    pure = return
-    (<*>) = ap
-
-instance Monad WorkingMonad where
-    return = WorkingMonad . return
-    (WorkingMonad action) >>= f = WorkingMonad (action >>= runWorkingMonad . f)
+    catchError (WorkingMonad m) handler = WorkingMonad $ ExceptT $ ReaderT $ \env -> StateT $ \s -> do
+        (result, newState) <- runStateT (runReaderT (runExceptT m) env) s
+        case result of
+            Left err -> runStateT (runReaderT (runExceptT (runWorkingMonad (handler err)))) newState
+            Right val -> return (Right val, newState)
 
 instance MonadIO WorkingMonad where
-    liftIO = WorkingMonad . liftIO
-
-instance MonadFail WorkingMonad where
-    fail msg = throwError (CustomError (msg))
+    liftIO io = WorkingMonad $ ExceptT $ ReaderT $ \env -> StateT $ \s -> liftM (\x -> (Right x, s)) (liftIO io)
 
 
 instance MonadFail (Either Error) where
@@ -179,24 +165,16 @@ instance MonadFail (Either Error) where
 -- monads
 
 getStore :: WorkingMonad Store
-getStore = WorkingMonad $ do
-    (sto, _) <- get
-    return sto
+getStore = fst <$> get
 
 getControlFlow :: WorkingMonad ControlFlow
-getControlFlow = WorkingMonad $ do
-    (_, controlFlow) <- get
-    return controlFlow
+getControlFlow = snd <$> get
 
 getBreakCount :: WorkingMonad Integer
-getBreakCount = WorkingMonad $ do
-    (breakCount, _) <- runWorkingMonad getControlFlow
-    return breakCount
+getBreakCount = fst <$> getControlFlow
 
 getContinueFlag :: WorkingMonad Bool
-getContinueFlag = WorkingMonad $ do
-    (_, continueFlag) <- runWorkingMonad getControlFlow
-    return continueFlag
+getContinueFlag = snd <$> getControlFlow
 
 putStore :: Store -> WorkingMonad ()
 putStore sto = do
@@ -214,7 +192,7 @@ msetVarVal var val = do
     sto <- getStore
     putStore (setVarVal rhoV sto var val)
 
--- not monadic:
+----------------------------------------------------------- not monadic:
 
 unsafePrint s = unsafePerformIO (putStrLn s) `seq` ()
 
@@ -268,24 +246,30 @@ replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) x
 
 -----------------------------------------EXPRESSIONS (monadic) ----------------------------------------------
 
+
 eMe :: Expr -> WorkingMonad SimpleValue
 
 eMe (ENum n) = return (VInt n)
 
-eMe (FuncVal (Ident func) args) = do
-    f <- mgetfunc (Ident func)
-    arguments <- eMa args
-    res <- f arguments
-    return res
+
+-- eMe (FuncVal (Ident func) args) = do
+--     (_, rhoF) <- ask
+--     sto <- getStore
+--     let f = mapGet rhoF func
+--     argsRes <- eMa args
+--     let res = (f argsRes sto)
+--     case res of
+--         Left err -> throwError err
+--         Right (sto', val) -> do
+--             putStore sto'
+--             return val
+
 
 eMe (VarVal (Ident var)) = do
     (rhoV, _) <- ask
     sto <- getStore
-    case Data.Map.lookup var rhoV of
-        Just (loc, _) -> case (mapGet (currMap sto) loc) of 
-            SimpleVal val -> return val
-            ComplexVal val -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
-        Nothing -> throwError (VariableNotDefined (Ident var))
+    let (SimpleVal x) = (getVarVal rhoV sto var)
+    return x
 
 eMe (EPlus exp0 exp1) = do
     (VInt x) <- eMe exp0
@@ -316,13 +300,17 @@ eMe (EMod exp0 exp1) = do
 
 eMe (EArray (Ident arr) exp0) = do
     (VInt i) <- eMe exp0
-    a <- mgetarray (Ident arr)
+    sto <- getStore
+    (rhoV, _) <- ask
+    let ComplexVal (VArray a) = getVarVal rhoV sto arr
     if i < 0 || i >= toInteger (length a) then throwError (IndexOutOfBounds i)
     else return (a !! fromInteger i)
 
 eMe (EDict (Ident dict) exp0) = do
     (VInt i) <- eMe exp0
-    d <- mgetdict (Ident dict)
+    sto <- getStore
+    (rhoV, _) <- ask
+    let ComplexVal (VDict d) = getVarVal rhoV sto dict
     if not (mapHasKey d i) then throwError (KeyNotInDict i)
     else return (d ! i)
 
@@ -372,24 +360,18 @@ eMe (BDictHasKey (Ident dict) exp0) = do
     let ComplexVal (VDict d) = getVarVal rhoV sto dict
     return (VBool (mapHasKey d i))
 
--- helper functions:
 
 monadicEvalBinaryIntOp :: (Integer -> Integer -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
 monadicEvalBinaryIntOp op exp0 exp1 = do
-    valX <- eMe exp0
-    valY <- eMe exp1
-    case (valX, valY) of
-        (VInt x, VInt y) -> return (VBool (x `op` y))
-        _ -> throwError $ TypeMismatch (typeof (valX)) (typeof (valY))
+    (VInt x) <- eMe exp0
+    (VInt y) <- eMe exp1
+    return (VBool (x `op` y))
 
 monadicEvalBinaryBoolOp :: (Bool -> Bool -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
 monadicEvalBinaryBoolOp op exp0 exp1 = do
-    valX <- eMe exp0
-    valY <- eMe exp1
-    case (valX, valY) of
-        (VBool x, VBool y) -> return (VBool (x `op` y))
-        _ -> throwError $ TypeMismatch (typeof valX) (typeof valY)
-
+    (VBool x) <- eMe exp0
+    (VBool y) <- eMe exp1
+    return (VBool (x `op` y))
 
 monadicEvalBinarySimplevalOp :: (SimpleValue -> SimpleValue -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
 monadicEvalBinarySimplevalOp op exp0 exp1 = do
@@ -397,32 +379,6 @@ monadicEvalBinarySimplevalOp op exp0 exp1 = do
     y <- eMe exp1
     return (VBool (x `op` y))
 
-mgetfunc :: Ident -> WorkingMonad MFunc
-mgetfunc (Ident func) = do
-    (_, rhoF) <- ask
-    case Data.Map.lookup func rhoF of
-        Just f -> return f
-        Nothing -> throwError (FunctionNotInScope (Ident func))
-
-mgetarray :: Ident -> WorkingMonad Arr
-mgetarray (Ident arr) = do
-    (rhoV, _) <- ask
-    case Data.Map.lookup arr rhoV of
-        Just (loc, _) -> do
-            sto <- getStore
-            let ComplexVal (VArray a) = getVarVal rhoV sto arr
-            return a
-        Nothing -> throwError (VariableNotDefined (Ident arr))
-
-mgetdict :: Ident -> WorkingMonad Dict
-mgetdict (Ident dict) = do
-    (rhoV, _) <- ask
-    case Data.Map.lookup dict rhoV of
-        Just (loc, _) -> do
-            sto <- getStore
-            let ComplexVal (VDict d) = getVarVal rhoV sto dict
-            return d
-        Nothing -> throwError (VariableNotDefined (Ident dict))
 
 
 -----------------------------------------EXPRESSIONS ----------------------------------------------
@@ -595,7 +551,7 @@ evalSimpleValBinOp op exp0 exp1 rhoV rhoF sto = do
     (sto'', y) <- eE exp1 rhoV rhoF sto'
     return (sto'', VBool (x `op` y))
 
------------------------------------------- INSTRUCTIONS (monadic) -------------------------------------------
+------------------------------------------ INSTRUCTIONS (monadic)-------------------------------------------
 iMI :: Instr -> WorkingMonad (Maybe SimpleValue)
 
 iMI (ISeq instr0 instr1) = do
@@ -611,24 +567,13 @@ iMI (ISeq instr0 instr1) = do
 
 iMI (IDSeq def instr) = do
     (rhoV', rhoF') <- iMD def
-    
-    res <- local (const (rhoV', rhoF')) $ do
+    local (const (rhoV', rhoF')) $ do
         iMI instr
-    case res of
-        Just val -> return (Just val)
-        Nothing -> return Nothing
 
-iMI (ISSeq specStmt instr) = do
-    (rhoV', rhoF') <- iMSpecS specStmt
-
-    res <- local (const (rhoV', rhoF')) $ do
-        iMI instr
-    case res of
-        Just val -> return (Just val)
-        Nothing -> return Nothing
 
 iMI (IStmt stmt) = do
     iMS stmt
+    return Nothing
 
 ------------------------------------------ INSTRUCTIONS -------------------------------------------
 -- Instructions include definitions and statements, so they can modify everything.
@@ -670,12 +615,62 @@ iI (IStmt stmt) rhoV rhoF sto = do
         Right (res, (breakCount, continueFlag)) -> return (rhoV, rhoF, (res, (breakCount, continueFlag)))
 
 
--- commented because the specstmt semantics has changed
--- iI (ISpecStmt specStmt) rhoV rhoF sto = do
---     let (rhoV', sto') = iSpecS specStmt rhoV rhoF sto
---     return (rhoV', rhoF, (StoreOnly sto', (0, False)))
+iI (ISpecStmt specStmt) rhoV rhoF sto = do
+    let (rhoV', sto') = iSpecS specStmt rhoV rhoF sto
+    return (rhoV', rhoF, (StoreOnly sto', (0, False)))
 
 -------------------------------VARIABLE DEFINITIONS (monadic)------------------------------------------------
+
+-- iMD :: Def -> WorkingMonad ()
+
+-- iMD (VarDef stype (Ident var) expr) = do
+--     (rhoV, rhoF) <- ask
+--     sto <- getStore
+--     val <- eMe expr
+--     let (loc, sto') = newloc sto
+--     let rhoV' = mapSet rhoV var (loc, (False, False))
+--     local (const (rhoV', rhoF)) $ do --do poprawy
+--         controlFlow <- getControlFlow
+--         put (setVarVal rhoV' sto' var (SimpleVal val), controlFlow)
+
+-- iMD (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
+--     (rhoV, rhoF) <- ask
+--     sto <- getStore
+--     (VInt size) <- eMe exprSize
+--     if size < 0 then throwError (InvalidArraySize size)
+--     else do
+--         initExprRes <- eMe exprInitVal
+--         case initExprRes of
+--             VInt initVal -> do
+--                 let (loc, sto') = newloc sto
+--                 let arrVal = replicate (fromInteger size) (VInt initVal)
+--                 let rhoV' = mapSet rhoV arr (loc, (False, False))
+--                 controlFlow <- getControlFlow
+--                 put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
+--             _ -> throwError (TypeMismatch SType FType)
+
+-- iMD (ArrDef stype (Ident arr) exprSize) = do
+--     (rhoV, rhoF) <- ask
+--     sto <- getStore
+--     (VInt size) <- eMe exprSize
+--     if size < 0 then throwError (InvalidArraySize size)
+--     else do
+--         let (loc, sto') = newloc sto
+--         let arrVal = replicate (fromInteger size) (if stype == STInt then VInt 0 else VBool False)
+--         let rhoV' = mapSet rhoV arr (loc, (False, False))
+--         controlFlow <- getControlFlow
+--         put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
+
+-- iMD (DictDef stype (Ident dict)) = do
+--     (rhoV, rhoF) <- ask
+--     sto <- getStore
+--     let (loc, sto') = newloc sto
+--     let rhoV' = mapSet rhoV dict (loc, (False, False))
+--     controlFlow <- getControlFlow
+--     put (setVarVal rhoV' sto' dict (ComplexVal (VDict empty)), controlFlow)
+
+
+-------------------------------VARIABLE DEFINITIONS (monadic v2)------------------------------------------------
 
 iMD :: Def -> WorkingMonad (VEnv, FMEnv)
 
@@ -730,17 +725,19 @@ iMD (DictDef stype (Ident dict)) = do
 
 iMD (FuncDef ftype (Ident func) params instr) = do
     (rhoV, rhoF) <- ask
-    let x :: [FuncArg] -> WorkingMonad(SimpleValue) 
+    let x :: [FuncArg] -> WorkingMonad SimpleValue
         x = \args -> do 
-            let paramList = eP params
-            (rhoV, rhoF) <- msetarguments (paramList) args
-            let rhoF' = mapSet rhoF func x
-            res <- local (const (rhoV, rhoF')) (iMI instr)
+            msetarguments (eP params) args  -- Wywołanie `msetarguments` powinno działać w `WorkingMonad`
+            (rhoV, rhoF) <- ask
+            let rhoF' = mapSet rhoF func x  -- Zmieniamy mapę `rhoF` na `rhoF'`
+            res <- local (const (rhoV, rhoF')) (iMI instr)  -- Użycie `local` z odpowiednim środowiskiem
             case res of
-                Just val -> return (val)
-                Nothing -> return (VInt 0)
-    let rhoF' = mapSet rhoF func x
-    return (rhoV, rhoF')
+                Just val -> return val
+                Nothing -> return (VInt 0)  -- Zwrócenie domyślnej wartości
+
+    let rhoF' = mapSet rhoF func x  -- Aktualizacja `rhoF` na `rhoF'`
+    return (rhoV, rhoF')  -- Zwrócenie nowego środowiska
+
 
 
 --reszta todo
@@ -1031,24 +1028,22 @@ iMS (SWhile expr i) = do
 iMS (SFor (Ident var) exprFrom exprTo instr) = do
     (VInt from) <- eMe exprFrom
     (VInt to) <- eMe exprTo
-    (rhoV, rhoF) <- iMD (VarDef STInt (Ident var) (ENum from))
-    local (const (rhoV, rhoF)) $ do
-        let x = do
-            (VInt val) <- eMe (VarVal (Ident var))
-            if val <= to then do
-                res <- iMI instr
-                case res of
-                    Just val -> return (Just val)
-                    Nothing -> do
-                        (breakCount, continueFlag) <- getControlFlow
-                        if breakCount > 0 || continueFlag then
-                            return Nothing
-                        else do
-                            msetVarVal var (SimpleVal (VInt (val + 1)))
-                            x
-            else
-                return Nothing
-        x
+    let x = do
+        if from <= to then do
+            res <- iMI instr
+            case res of
+                Just val -> return (Just val)
+                Nothing -> do
+                    (breakCount, continueFlag) <- getControlFlow
+                    if breakCount > 0 || continueFlag then
+                        return Nothing
+                    else do
+                        msetVarVal var (SimpleVal (VInt (from + 1)))
+                        x
+        else
+            return Nothing
+    msetVarVal var (SimpleVal (VInt from))
+    x
 
 iMS (SReturn expr) = do
     val <- eMe expr
@@ -1064,71 +1059,6 @@ iMS (VarAssign (Ident var) expr) = do
     msetVarVal var (SimpleVal val)
     return Nothing
 
-iMS (VarAssignPlus (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))        -- todo: throw error if it is not int
-    case val of
-        VInt n -> do
-            msetVarVal var (SimpleVal (VInt (n + m)))
-            return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type 
-
-iMS (VarAssignMinus (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
-    case val of
-        VInt n -> do
-            msetVarVal var (SimpleVal (VInt (m - n)))
-            return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
-
-iMS (VarAssignMul (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
-    case val of
-        VInt n -> do
-            msetVarVal var (SimpleVal (VInt (n * m)))
-            return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
-
-iMS (VarAssignDiv (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
-    case val of
-        VInt n -> do
-            if n == 0 then throwError DivByZero
-            else do
-                msetVarVal var (SimpleVal (VInt (m `div` n)))
-                return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
-
-iMS (VarAssignMod (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
-    case val of
-        VInt n -> do
-            if n == 0 then throwError ModByZero
-            else do
-                msetVarVal var (SimpleVal (VInt (m `mod` n)))
-                return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
-
-
-iMS (ArrElSet (Ident arr) exprIndex exprVal) = do
-    val <- eMe exprVal
-    (VInt index) <- eMe exprIndex
-    a <- mgetarray (Ident arr)
-    if index < 0 || (fromInteger index) >= (length a) then throwError (IndexOutOfBounds index)
-    else do
-        msetVarVal arr (ComplexVal (VArray (replaceNth a (fromInteger index) val)))
-        return (Nothing)
-
-iMS (DictElSet (Ident dict) exprKey exprVal) = do
-    val <- eMe exprVal
-    (VInt key) <- eMe exprKey
-    d <- mgetdict (Ident dict)
-    msetVarVal dict (ComplexVal (VDict (mapSet d key val)))
-    return (Nothing)
 
 ------------------------------------------ STATEMENTS ---------------------------------------------
 -- Statements do not modify the environment, but can modify the store. The return statement
@@ -1384,51 +1314,6 @@ iS (DictElSet (Ident dict) exprIndex exprVal) rhoV rhoF sto = do
                     let sto''' = setVarVal rhoV sto'' dict (ComplexVal (VDict d'))
                     return (StoreOnly sto''', (0, False))
 
--------------------------------------SPECIAL STATEMENTS (monadic) --------------------------------------------
-
-mgetvarloc :: Ident -> WorkingMonad (Loc, DebugFlags)
-
-mgetvarloc (Ident var) = do
-    (rhoV, _) <- ask
-    case Data.Map.lookup var rhoV of
-        Just (loc, flags) -> return (loc, flags)
-        Nothing -> throwError (VariableNotDefined (Ident var))
-
-iMSpecS :: SpecStmt -> WorkingMonad (VEnv, FMEnv)
-
-
-iMSpecS (SSwap (Ident var1) (Ident var2)) = do
-    (rhoV, rhoF) <- ask
-    (loc1, _) <- mgetvarloc (Ident var1)
-    (loc2, _) <- mgetvarloc (Ident var2)
-    let rhoV' = setVarLoc (setVarLoc rhoV var1 loc2) var2 loc1
-    return (rhoV', rhoF)
-
-iMSpecS (DebugAssEnable (Ident var)) = do
-    (rhoV, rhoF) <- ask
-    (loc, (readFlag, _)) <- mgetvarloc (Ident var)
-    let rhoV' = mapSet rhoV var (loc, (readFlag, True))
-    return (rhoV', rhoF)
-
-iMSpecS (DebugAssDisable (Ident var)) = do
-    (rhoV, rhoF) <- ask
-    (loc, (readFlag, _)) <- mgetvarloc (Ident var)
-    let rhoV' = mapSet rhoV var (loc, (readFlag, False))
-    return (rhoV', rhoF)
-
-iMSpecS (DebugReadEnable (Ident var)) = do
-    (rhoV, rhoF) <- ask
-    (loc, (_, writeFlag)) <- mgetvarloc (Ident var)
-    let rhoV' = mapSet rhoV var (loc, (True, writeFlag))
-    return (rhoV', rhoF)
-
-iMSpecS (DebugReadDisable (Ident var)) = do
-    (rhoV, rhoF) <- ask
-    (loc, (_, writeFlag)) <- mgetvarloc (Ident var)
-    let rhoV' = mapSet rhoV var (loc, (False, writeFlag))
-    return (rhoV', rhoF)
-
-
 -------------------------------------SPECIAL STATEMENTS--------------------------------------------
 -- Special statements can modify the VEnv (setting debug flags) or the store (swapping variables).
 -- There is no function swapping for now, so FEnv is not modified.
@@ -1526,13 +1411,15 @@ mcompute s =
             let initialEnv = (rhoV0, rhoF0)
             let initialState = (sto0, (0, False))
 
-            result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
-            
-
+            result <- evalStateT 
+                        (runReaderT 
+                            (runExceptT 
+                                (runWorkingMonad (iMI e))
+                            ) initialEnv) 
+                        initialState
             case result of
                 Left err -> do
                     putStrLn "\nComputation Failed...\n"
-                    putStrLn $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
                     exitFailure
                 Right _ -> do
                     putStrLn "\nEnd of computation\n"

@@ -101,10 +101,10 @@ All other symbols are terminals.
   | //Lambda// | -> | //FType// ``lambda`` ``(`` //Params// ``)`` ``->`` ``{`` //Instr// ``}``
   | //Instr// | -> | //Instr1// ``;`` //Instr//
   |  |  **|**  | //Def// ``;`` //Instr//
-  |  |  **|**  | //SpecStmt// ``;`` //Instr//
   |  |  **|**  | //Instr1//
   | //Instr1// | -> | //Stmt//
   |  |  **|**  | //Instr1// ``;``
+  | //Inst// | -> | //SpecStmt// ``;`` //Instr//
   | //Def1// | -> | //SType// //Ident// ``=`` //Expr//
   |  |  **|**  | //FType// //Ident// ``(`` //Params// ``)`` ``{`` //Instr// ``}``
   |  |  **|**  | ``Array`` //SType// //Ident// ``[`` //Expr// ``]`` ``(`` //Expr// ``)``

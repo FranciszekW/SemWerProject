@@ -65,11 +65,10 @@ data Params
 data Lambda = Lam FType Params Instr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
-data Instr
-    = ISeq Instr Instr
-    | IDSeq Def Instr
-    | IStmt Stmt
-    | ISSeq SpecStmt Instr
+data Instr = ISeq Instr Instr | IDSeq Def Instr | IStmt Stmt
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data Inst = ISSeq SpecStmt Instr
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Def

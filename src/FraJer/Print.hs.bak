@@ -205,6 +205,9 @@ instance Print FraJer.Abs.Instr where
     FraJer.Abs.ISeq instr1 instr2 -> prPrec i 0 (concatD [prt 1 instr1, doc (showString ";"), prt 0 instr2])
     FraJer.Abs.IDSeq def instr -> prPrec i 0 (concatD [prt 0 def, doc (showString ";"), prt 0 instr])
     FraJer.Abs.IStmt stmt -> prPrec i 1 (concatD [prt 0 stmt])
+
+instance Print FraJer.Abs.Inst where
+  prt i = \case
     FraJer.Abs.ISSeq specstmt instr -> prPrec i 0 (concatD [prt 0 specstmt, doc (showString ";"), prt 0 instr])
 
 instance Print FraJer.Abs.Def where

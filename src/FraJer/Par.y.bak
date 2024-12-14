@@ -184,11 +184,13 @@ Instr :: { FraJer.Abs.Instr }
 Instr
   : Instr1 ';' Instr { FraJer.Abs.ISeq $1 $3 }
   | Def ';' Instr { FraJer.Abs.IDSeq $1 $3 }
-  | SpecStmt ';' Instr { FraJer.Abs.ISSeq $1 $3 }
   | Instr1 { $1 }
 
 Instr1 :: { FraJer.Abs.Instr }
 Instr1 : Stmt { FraJer.Abs.IStmt $1 } | Instr1 ';' { $1 }
+
+Inst :: { FraJer.Abs.Inst }
+Inst : SpecStmt ';' Instr { FraJer.Abs.ISSeq $1 $3 }
 
 Def1 :: { FraJer.Abs.Def }
 Def1

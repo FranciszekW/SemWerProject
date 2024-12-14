@@ -84,6 +84,9 @@ transInstr x = case x of
   FraJer.Abs.ISeq instr1 instr2 -> failure x
   FraJer.Abs.IDSeq def instr -> failure x
   FraJer.Abs.IStmt stmt -> failure x
+
+transInst :: FraJer.Abs.Inst -> Result
+transInst x = case x of
   FraJer.Abs.ISSeq specstmt instr -> failure x
 
 transDef :: FraJer.Abs.Def -> Result

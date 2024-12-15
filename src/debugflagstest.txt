@@ -1,0 +1,24 @@
+IntFunc test1 (Int n) {
+    Int x = 0;
+    debug assignment enable x;
+    debug reading enable x;
+    while (n-->0) {
+        if (x % 2 == 0) {
+            print (x++);
+        } else {
+            x=x+1
+        }
+    };  
+    return (x);
+};
+
+
+IntFunc test (Int a, Int b) {
+    print(a);
+    print(b);
+    swap (a, b);
+    print(a);
+    print(b);
+};
+
+print(test(6,7));

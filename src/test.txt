@@ -1,6 +1,10 @@
-Dict Int d;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-print(5);;;;;
-
+Int i = 0;
+while (i < 10) {
+    print(i);
+    Int j = i + 1;
+    swap(i, j);
+    skip;
+};
 //
 IntFunc f(IntFunc g, IntFunc h, Int z) {
     return (g(h(z)))

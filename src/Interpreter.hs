@@ -1,6 +1,9 @@
 -- TODOS:
 -- 1. Monadic lambda implementation.
--- 2. Static type checking.
+-- 2. Static type checking (checking execution mode in every evaluation function).
+-- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
+-- 3. Check some strange swapping behaviour (test.txt).
+-- 4. Fix grammar to allow definition or special statements to be the last instruction in a sequence.
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -134,12 +137,19 @@ data Store = CStore {currMap :: Map Loc Value, nextLoc :: Loc} deriving Show
 data StmtResult = StoreOnly Store | StoreAndValue Store SimpleValue deriving Show
 type StmtState = (StmtResult, ControlFlow)
 
+data ExecutionMode = TypeCheck | Runtime deriving (Show, Eq)
+data TypeStore = TStore {typeMap :: Map Var Type, nextTypeLoc :: Loc} deriving Show
+
 ------------------------------------------ MONADS -------------------------------------------------
 
 type MyExprMonad = Either Error (Store, SimpleValue)
 type MFunc = [FuncArg] -> WorkingMonad (SimpleValue)
 type FMEnv = Map Var MFunc
+type Env = (VEnv, FMEnv, ExecutionMode)
 
+-- TODO: Change the reader to use Env instead of (VEnv, FMEnv). Also, change the state
+-- to use (Store, TypeStore, ControlFlow). Will do this later,
+-- because it's a lot of work and we want the code to compile for now :)
 newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
 
 instance MonadState (Store, ControlFlow) WorkingMonad where
@@ -178,6 +188,12 @@ instance MonadFail (Either Error) where
 
 ------------------------------------------ HELPER FUNCTIONS ---------------------------------------
 -- monads
+
+-- Not working yet, because we need to change the reader to use Env instead of (VEnv, FMEnv).
+--getExecutionMode :: WorkingMonad ExecutionMode
+--getExecutionMode = WorkingMonad $ do
+--    (_, _, mode) <- ask
+--    return mode
 
 getStore :: WorkingMonad Store
 getStore = WorkingMonad $ do
@@ -1482,8 +1498,11 @@ main = do
     getContents >>= mcompute
     putStrLn ""
 
-rhoF0:: FMEnv
+rhoF0:: FEnv
 rhoF0 = fromList []
+
+rhoFM0:: FMEnv
+rhoFM0 = fromList []
 
 rhoV0:: VEnv
 rhoV0 = fromList []
@@ -1491,28 +1510,32 @@ rhoV0 = fromList []
 sto0:: Store
 sto0 = CStore empty 0
 
+tsto0:: TypeStore
+tsto0 = TStore empty 0
+
 -- After computations we print the VEnv and the Store.
--- compute s =
---     case pInstr (myLexer s) of
---         Left err -> do
---             putStrLn "\nParse              Failed...\n"
---             putStrLn err
---             exitFailure
---         Right e -> do
---             putStrLn "\nParse Successful!\n"
---             let instrRes = iI e rhoV0 rhoF0 sto0
---             case instrRes of
---                 Left err -> do
---                     putStrLn "\nError during computation:"
---                     putStrLn $ show err
---                 Right (rhoV', rhoF', (res, _)) -> do
---                     putStrLn "\nInterpretation     Successful!\n"
---                     rhoV' `seq` rhoF' `seq` res `seq` do
---                     putStrLn "\nEnd of computation"
---                     putStrLn "\nVEnv:"
---                     putStrLn $ show rhoV'
---                     putStrLn "\nStore:"
---                     putStrLn $ show res
+--compute s =
+--    case pInstr (myLexer s) of
+--        Left err -> do
+--            putStrLn "\nParse              Failed...\n"
+--            putStrLn err
+--            exitFailure
+--        Right e -> do
+--            putStrLn "\nParse Successful!\n"
+--            let instrRes = iI e rhoV0 rhoF0 sto0
+--            case instrRes of
+--                Left err -> do
+--                    putStrLn "\nError during computation:"
+--                    putStrLn $ show err
+--                Right (rhoV', rhoF', (res, _)) -> do
+--                    putStrLn "\nInterpretation     Successful!\n"
+--                    rhoV' `seq` rhoF' `seq` res `seq` do
+--                    putStrLn "\nEnd of computation"
+--                    putStrLn "\nVEnv:"
+--                    putStrLn $ show rhoV'
+--                    putStrLn "\nStore:"
+--                    putStrLn $ show res
+
 
 mcompute :: String -> IO ()
 mcompute s =
@@ -1524,11 +1547,24 @@ mcompute s =
         Right e -> do
             putStrLn "\nParse Successful!\n"
 
-            let initialEnv = (rhoV0, rhoF0)
+            let initialEnv = (rhoV0, rhoFM0)
             let initialState = (sto0, (0, False))
 
+            -- For static type checking:
+            -- let initialEnv = (rhoV0, rhoF0, TypeCheck)
+            -- let initialState = (sto0, tsto0, (0, False))
+--            typeCheckResult <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
+--            case typeCheckResult of
+--                Left err -> do
+--                    putStrLn "\nType checking failed...\n"
+--                    putStrLn $ "Error: " ++ show err
+--                    exitFailure
+--                Right _ -> do
+--                    putStrLn "\nType checking successful!\n"
+
+
             result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
-            
+
 
             case result of
                 Left err -> do
@@ -1545,10 +1581,10 @@ mcompute s =
                     putStrLn $ show sto0
 
 -- Definicja funkcji
--- processFile path = do
---     content <- readFile path
---     let strippedContent = Prelude.filter (/= '\n') content
---     compute strippedContent
+--processFile path = do
+--    content <- readFile path
+--    let strippedContent = Prelude.filter (/= '\n') content
+--    compute strippedContent
 
 mprocessFile path = do
     content <- readFile path

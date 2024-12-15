@@ -82,4 +82,4 @@ IntFunc gcd(Int a, Int b) {
 };
 
 
-print(gcd(2025, 105));
+print(gcd(2023, 105));

@@ -68,37 +68,39 @@ Grammar
 	Instr -> Instr1                                    (59)
 	Instr1 -> Stmt                                     (60)
 	Instr1 -> Instr1 ';'                               (61)
-	Def1 -> SType Ident '=' Expr                       (62)
-	Def1 -> FType Ident '(' Params ')' '{' Instr '}'   (63)
-	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr ')'   (64)
-	Def1 -> 'Array' SType Ident '[' Expr ']'           (65)
-	Def1 -> 'Dict' SType Ident                         (66)
-	Def -> Def1                                        (67)
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}'   (68)
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}'           (69)
-	Stmt1 -> 'while' '(' Expr ')' '{' Instr '}'        (70)
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}'   (71)
-	Stmt1 -> 'skip'                                    (72)
-	Stmt1 -> 'return' '(' Expr ')'                     (73)
-	Stmt1 -> 'print' '(' Expr ')'                      (74)
-	Stmt1 -> 'break' '(' Expr ')'                      (75)
-	Stmt1 -> 'break'                                   (76)
-	Stmt1 -> 'continue' 'outer' '(' Expr ')'           (77)
-	Stmt1 -> 'continue'                                (78)
-	Stmt1 -> Ident '=' Expr                            (79)
-	Stmt1 -> Ident '+=' Expr                           (80)
-	Stmt1 -> Ident '-=' Expr                           (81)
-	Stmt1 -> Ident '*=' Expr                           (82)
-	Stmt1 -> Ident '/=' Expr                           (83)
-	Stmt1 -> Ident '%=' Expr                           (84)
-	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr ')'       (85)
-	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr ')'   (86)
-	Stmt -> Stmt1                                      (87)
-	SpecStmt -> 'swap' '(' Ident ',' Ident ')'         (88)
-	SpecStmt -> 'debug' 'assignment' 'enable' Ident    (89)
-	SpecStmt -> 'debug' 'assignment' 'disable' Ident   (90)
-	SpecStmt -> 'debug' 'reading' 'enable' Ident       (91)
-	SpecStmt -> 'debug' 'reading' 'disable' Ident      (92)
+	Def -> Def ';'                                     (62)
+	Def -> Def1                                        (63)
+	SpecStmt -> SpecStmt ';'                           (64)
+	SpecStmt -> 'swap' '(' Ident ',' Ident ')'         (65)
+	SpecStmt -> 'debug' 'assignment' 'enable' Ident    (66)
+	SpecStmt -> 'debug' 'assignment' 'disable' Ident   (67)
+	SpecStmt -> 'debug' 'reading' 'enable' Ident       (68)
+	SpecStmt -> 'debug' 'reading' 'disable' Ident      (69)
+	Def1 -> SType Ident '=' Expr                       (70)
+	Def1 -> FType Ident '(' Params ')' '{' Instr '}'   (71)
+	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr ')'   (72)
+	Def1 -> 'Array' SType Ident '[' Expr ']'           (73)
+	Def1 -> 'Dict' SType Ident                         (74)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}'   (75)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}'           (76)
+	Stmt1 -> 'while' '(' Expr ')' '{' Instr '}'        (77)
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}'   (78)
+	Stmt1 -> 'skip'                                    (79)
+	Stmt1 -> 'return' '(' Expr ')'                     (80)
+	Stmt1 -> 'print' '(' Expr ')'                      (81)
+	Stmt1 -> 'break' '(' Expr ')'                      (82)
+	Stmt1 -> 'break'                                   (83)
+	Stmt1 -> 'continue' 'outer' '(' Expr ')'           (84)
+	Stmt1 -> 'continue'                                (85)
+	Stmt1 -> Ident '=' Expr                            (86)
+	Stmt1 -> Ident '+=' Expr                           (87)
+	Stmt1 -> Ident '-=' Expr                           (88)
+	Stmt1 -> Ident '*=' Expr                           (89)
+	Stmt1 -> Ident '/=' Expr                           (90)
+	Stmt1 -> Ident '%=' Expr                           (91)
+	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr ')'       (92)
+	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr ')'   (93)
+	Stmt -> Stmt1                                      (94)
 
 -----------------------------------------------------------------------------
 Terminals
@@ -194,11 +196,11 @@ Non-terminals
 	Lambda          rule  55
 	Instr           rules 56, 57, 58, 59
 	Instr1          rules 60, 61
-	Def1            rules 62, 63, 64, 65, 66
-	Def             rule  67
-	Stmt1           rules 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86
-	Stmt            rule  87
-	SpecStmt        rules 88, 89, 90, 91, 92
+	Def             rules 62, 63
+	SpecStmt        rules 64, 65, 66, 67, 68, 69
+	Def1            rules 70, 71, 72, 73, 74
+	Stmt1           rules 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93
+	Stmt            rule  94
 
 -----------------------------------------------------------------------------
 States
@@ -230,11 +232,11 @@ State 0
 	FType          goto state 39
 	Instr          goto state 56
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
+	Stmt           goto state 60
 
 State 1
 
@@ -286,8 +288,8 @@ State 3
 
 	SType          goto state 38
 	FType          goto state 39
-	Def1           goto state 40
-	Def            goto state 41
+	Def            goto state 40
+	Def1           goto state 41
 
 State 4
 
@@ -455,7 +457,7 @@ State 17
 
 	Lambda -> FType . 'lambda' '(' Params ')' '->' '{' Instr '}'    (rule 55)
 
-	'lambda'       shift, and enter state 116
+	'lambda'       shift, and enter state 117
 
 
 State 18
@@ -477,14 +479,14 @@ State 19
 
 	'!='           reduce using rule 16
 	'%'            reduce using rule 16
-	'('            shift, and enter state 110
+	'('            shift, and enter state 111
 	')'            reduce using rule 16
 	'*'            reduce using rule 16
 	'+'            reduce using rule 16
-	'++'           shift, and enter state 111
+	'++'           shift, and enter state 112
 	','            reduce using rule 16
 	'-'            reduce using rule 16
-	'--'           shift, and enter state 112
+	'--'           shift, and enter state 113
 	'/'            reduce using rule 16
 	';'            reduce using rule 16
 	'<'            reduce using rule 16
@@ -492,11 +494,11 @@ State 19
 	'=='           reduce using rule 16
 	'>'            reduce using rule 16
 	'>='           reduce using rule 16
-	'['            shift, and enter state 113
+	'['            shift, and enter state 114
 	']'            reduce using rule 16
 	'and'          reduce using rule 16
-	'get'          shift, and enter state 114
-	'has'          shift, and enter state 115
+	'get'          shift, and enter state 115
+	'has'          shift, and enter state 116
 	'or'           reduce using rule 16
 	'to'           reduce using rule 16
 	'xor'          reduce using rule 16
@@ -570,7 +572,7 @@ State 22
 
 	')'            reduce using rule 46
 	'+'            shift, and enter state 69
-	','            shift, and enter state 109
+	','            shift, and enter state 110
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
@@ -591,20 +593,20 @@ State 23
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 31
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 31
 	','            reduce using rule 31
 	'-'            reduce using rule 31
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 31
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 31
 	'and'          reduce using rule 31
 	'or'           reduce using rule 31
@@ -627,7 +629,7 @@ State 25
 	Args -> Lambda . ',' Args                           (rule 49)
 
 	')'            reduce using rule 48
-	','            shift, and enter state 99
+	','            shift, and enter state 100
 	%eof           reduce using rule 48
 
 
@@ -646,7 +648,7 @@ State 26
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 98
+	Expr2          goto state 99
 
 State 27
 
@@ -664,7 +666,7 @@ State 27
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 97
+	Expr           goto state 98
 	Expr1          goto state 23
 
 State 28
@@ -673,7 +675,7 @@ State 28
 
 	L_Ident        shift, and enter state 10
 
-	Ident          goto state 96
+	Ident          goto state 97
 
 State 29
 
@@ -681,7 +683,7 @@ State 29
 
 	L_Ident        shift, and enter state 10
 
-	Ident          goto state 95
+	Ident          goto state 96
 
 State 30
 
@@ -779,7 +781,7 @@ State 34
 
 	L_Ident        shift, and enter state 10
 
-	Ident          goto state 94
+	Ident          goto state 95
 
 State 35
 
@@ -788,7 +790,7 @@ State 35
 
 	L_Ident        shift, and enter state 10
 
-	Ident          goto state 93
+	Ident          goto state 94
 
 State 36
 
@@ -807,39 +809,41 @@ State 37
 
 State 38
 
-	Def1 -> SType . Ident '=' Expr                      (rule 62)
+	Def1 -> SType . Ident '=' Expr                      (rule 70)
+
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 93
+
+State 39
+
+	Def1 -> FType . Ident '(' Params ')' '{' Instr '}'    (rule 71)
 
 	L_Ident        shift, and enter state 10
 
 	Ident          goto state 92
 
-State 39
-
-	Def1 -> FType . Ident '(' Params ')' '{' Instr '}'    (rule 63)
-
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 91
-
 State 40
 
-	Def -> Def1 .                                       (rule 67)
+	%start_pDef -> Def .                                (rule 3)
+	Def -> Def . ';'                                    (rule 62)
 
-	';'            reduce using rule 67
-	%eof           reduce using rule 67
+	';'            shift, and enter state 91
+	%eof           accept
 
 
 State 41
 
-	%start_pDef -> Def .                                (rule 3)
+	Def -> Def1 .                                       (rule 63)
 
-	%eof           accept
+	';'            reduce using rule 63
+	%eof           reduce using rule 63
 
 
 State 42
 
-	Def1 -> 'Array' . SType Ident '[' Expr ']' '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' . SType Ident '[' Expr ']'          (rule 65)
+	Def1 -> 'Array' . SType Ident '[' Expr ']' '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' . SType Ident '[' Expr ']'          (rule 73)
 
 	'Bool'         shift, and enter state 15
 	'Int'          shift, and enter state 16
@@ -848,7 +852,7 @@ State 42
 
 State 43
 
-	Def1 -> 'Dict' . SType Ident                        (rule 66)
+	Def1 -> 'Dict' . SType Ident                        (rule 74)
 
 	'Bool'         shift, and enter state 15
 	'Int'          shift, and enter state 16
@@ -857,14 +861,14 @@ State 43
 
 State 44
 
-	Stmt1 -> Ident . '=' Expr                           (rule 79)
-	Stmt1 -> Ident . '+=' Expr                          (rule 80)
-	Stmt1 -> Ident . '-=' Expr                          (rule 81)
-	Stmt1 -> Ident . '*=' Expr                          (rule 82)
-	Stmt1 -> Ident . '/=' Expr                          (rule 83)
-	Stmt1 -> Ident . '%=' Expr                          (rule 84)
-	Stmt1 -> Ident . '[' Expr ']' '=' '(' Expr ')'      (rule 85)
-	Stmt1 -> Ident . 'set' '[' Expr ']' 'to' '(' Expr ')'    (rule 86)
+	Stmt1 -> Ident . '=' Expr                           (rule 86)
+	Stmt1 -> Ident . '+=' Expr                          (rule 87)
+	Stmt1 -> Ident . '-=' Expr                          (rule 88)
+	Stmt1 -> Ident . '*=' Expr                          (rule 89)
+	Stmt1 -> Ident . '/=' Expr                          (rule 90)
+	Stmt1 -> Ident . '%=' Expr                          (rule 91)
+	Stmt1 -> Ident . '[' Expr ']' '=' '(' Expr ')'      (rule 92)
+	Stmt1 -> Ident . 'set' '[' Expr ']' 'to' '(' Expr ')'    (rule 93)
 
 	'%='           shift, and enter state 81
 	'*='           shift, and enter state 82
@@ -878,11 +882,11 @@ State 44
 
 State 45
 
-	Stmt -> Stmt1 .                                     (rule 87)
+	Stmt -> Stmt1 .                                     (rule 94)
 
-	';'            reduce using rule 87
-	'}'            reduce using rule 87
-	%eof           reduce using rule 87
+	';'            reduce using rule 94
+	'}'            reduce using rule 94
+	%eof           reduce using rule 94
 
 
 State 46
@@ -894,67 +898,67 @@ State 46
 
 State 47
 
-	Stmt1 -> 'break' . '(' Expr ')'                     (rule 75)
-	Stmt1 -> 'break' .                                  (rule 76)
+	Stmt1 -> 'break' . '(' Expr ')'                     (rule 82)
+	Stmt1 -> 'break' .                                  (rule 83)
 
 	'('            shift, and enter state 80
-	';'            reduce using rule 76
-	'}'            reduce using rule 76
-	%eof           reduce using rule 76
+	';'            reduce using rule 83
+	'}'            reduce using rule 83
+	%eof           reduce using rule 83
 
 
 State 48
 
-	Stmt1 -> 'continue' . 'outer' '(' Expr ')'          (rule 77)
-	Stmt1 -> 'continue' .                               (rule 78)
+	Stmt1 -> 'continue' . 'outer' '(' Expr ')'          (rule 84)
+	Stmt1 -> 'continue' .                               (rule 85)
 
-	';'            reduce using rule 78
+	';'            reduce using rule 85
 	'outer'        shift, and enter state 79
-	'}'            reduce using rule 78
-	%eof           reduce using rule 78
+	'}'            reduce using rule 85
+	%eof           reduce using rule 85
 
 
 State 49
 
-	Stmt1 -> 'for' . '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 71)
+	Stmt1 -> 'for' . '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 78)
 
 	'('            shift, and enter state 78
 
 
 State 50
 
-	Stmt1 -> 'if' . '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' . '(' Expr ')' '{' Instr '}'          (rule 69)
+	Stmt1 -> 'if' . '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' . '(' Expr ')' '{' Instr '}'          (rule 76)
 
 	'('            shift, and enter state 77
 
 
 State 51
 
-	Stmt1 -> 'print' . '(' Expr ')'                     (rule 74)
+	Stmt1 -> 'print' . '(' Expr ')'                     (rule 81)
 
 	'('            shift, and enter state 76
 
 
 State 52
 
-	Stmt1 -> 'return' . '(' Expr ')'                    (rule 73)
+	Stmt1 -> 'return' . '(' Expr ')'                    (rule 80)
 
 	'('            shift, and enter state 75
 
 
 State 53
 
-	Stmt1 -> 'skip' .                                   (rule 72)
+	Stmt1 -> 'skip' .                                   (rule 79)
 
-	';'            reduce using rule 72
-	'}'            reduce using rule 72
-	%eof           reduce using rule 72
+	';'            reduce using rule 79
+	'}'            reduce using rule 79
+	%eof           reduce using rule 79
 
 
 State 54
 
-	Stmt1 -> 'while' . '(' Expr ')' '{' Instr '}'       (rule 70)
+	Stmt1 -> 'while' . '(' Expr ')' '{' Instr '}'       (rule 77)
 
 	'('            shift, and enter state 74
 
@@ -997,11 +1001,20 @@ State 57
 State 58
 
 	Instr -> Def . ';' Instr                            (rule 57)
+	Def -> Def . ';'                                    (rule 62)
 
 	';'            shift, and enter state 67
 
 
 State 59
+
+	Instr -> SpecStmt . ';' Instr                       (rule 58)
+	SpecStmt -> SpecStmt . ';'                          (rule 64)
+
+	';'            shift, and enter state 66
+
+
+State 60
 
 	Instr1 -> Stmt .                                    (rule 60)
 
@@ -1010,19 +1023,12 @@ State 59
 	%eof           reduce using rule 60
 
 
-State 60
-
-	Instr -> SpecStmt . ';' Instr                       (rule 58)
-
-	';'            shift, and enter state 66
-
-
 State 61
 
-	SpecStmt -> 'debug' . 'assignment' 'enable' Ident    (rule 89)
-	SpecStmt -> 'debug' . 'assignment' 'disable' Ident    (rule 90)
-	SpecStmt -> 'debug' . 'reading' 'enable' Ident      (rule 91)
-	SpecStmt -> 'debug' . 'reading' 'disable' Ident     (rule 92)
+	SpecStmt -> 'debug' . 'assignment' 'enable' Ident    (rule 66)
+	SpecStmt -> 'debug' . 'assignment' 'disable' Ident    (rule 67)
+	SpecStmt -> 'debug' . 'reading' 'enable' Ident      (rule 68)
+	SpecStmt -> 'debug' . 'reading' 'disable' Ident     (rule 69)
 
 	'assignment'   shift, and enter state 64
 	'reading'      shift, and enter state 65
@@ -1030,41 +1036,78 @@ State 61
 
 State 62
 
-	SpecStmt -> 'swap' . '(' Ident ',' Ident ')'        (rule 88)
+	SpecStmt -> 'swap' . '(' Ident ',' Ident ')'        (rule 65)
 
 	'('            shift, and enter state 63
 
 
 State 63
 
-	SpecStmt -> 'swap' '(' . Ident ',' Ident ')'        (rule 88)
+	SpecStmt -> 'swap' '(' . Ident ',' Ident ')'        (rule 65)
 
 	L_Ident        shift, and enter state 10
 
-	Ident          goto state 167
+	Ident          goto state 168
 
 State 64
 
-	SpecStmt -> 'debug' 'assignment' . 'enable' Ident    (rule 89)
-	SpecStmt -> 'debug' 'assignment' . 'disable' Ident    (rule 90)
+	SpecStmt -> 'debug' 'assignment' . 'enable' Ident    (rule 66)
+	SpecStmt -> 'debug' 'assignment' . 'disable' Ident    (rule 67)
 
-	'disable'      shift, and enter state 165
-	'enable'       shift, and enter state 166
+	'disable'      shift, and enter state 166
+	'enable'       shift, and enter state 167
 
 
 State 65
 
-	SpecStmt -> 'debug' 'reading' . 'enable' Ident      (rule 91)
-	SpecStmt -> 'debug' 'reading' . 'disable' Ident     (rule 92)
+	SpecStmt -> 'debug' 'reading' . 'enable' Ident      (rule 68)
+	SpecStmt -> 'debug' 'reading' . 'disable' Ident     (rule 69)
 
-	'disable'      shift, and enter state 163
-	'enable'       shift, and enter state 164
+	'disable'      shift, and enter state 164
+	'enable'       shift, and enter state 165
 
 
 State 66
 
 	Instr -> SpecStmt ';' . Instr                       (rule 58)
+	SpecStmt -> SpecStmt ';' .                          (rule 64)
 
+	';'            reduce using rule 64
+	'Array'        shift, and enter state 42
+	'Bool'         shift, and enter state 15
+	'BoolFunc'     shift, and enter state 12
+	'Dict'         shift, and enter state 43
+	'Int'          shift, and enter state 16
+	'IntFunc'      shift, and enter state 13
+	'break'        shift, and enter state 47
+	'continue'     shift, and enter state 48
+	'debug'        shift, and enter state 61
+	'for'          shift, and enter state 49
+	'if'           shift, and enter state 50
+	'print'        shift, and enter state 51
+	'return'       shift, and enter state 52
+	'skip'         shift, and enter state 53
+	'swap'         shift, and enter state 62
+	'while'        shift, and enter state 54
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 44
+	SType          goto state 38
+	FType          goto state 39
+	Instr          goto state 163
+	Instr1         goto state 57
+	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
+	Stmt1          goto state 45
+	Stmt           goto state 60
+
+State 67
+
+	Instr -> Def ';' . Instr                            (rule 57)
+	Def -> Def ';' .                                    (rule 62)
+
+	';'            reduce using rule 62
 	'Array'        shift, and enter state 42
 	'Bool'         shift, and enter state 15
 	'BoolFunc'     shift, and enter state 12
@@ -1088,44 +1131,11 @@ State 66
 	FType          goto state 39
 	Instr          goto state 162
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 67
-
-	Instr -> Def ';' . Instr                            (rule 57)
-
-	'Array'        shift, and enter state 42
-	'Bool'         shift, and enter state 15
-	'BoolFunc'     shift, and enter state 12
-	'Dict'         shift, and enter state 43
-	'Int'          shift, and enter state 16
-	'IntFunc'      shift, and enter state 13
-	'break'        shift, and enter state 47
-	'continue'     shift, and enter state 48
-	'debug'        shift, and enter state 61
-	'for'          shift, and enter state 49
-	'if'           shift, and enter state 50
-	'print'        shift, and enter state 51
-	'return'       shift, and enter state 52
-	'skip'         shift, and enter state 53
-	'swap'         shift, and enter state 62
-	'while'        shift, and enter state 54
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 44
-	SType          goto state 38
-	FType          goto state 39
-	Instr          goto state 161
-	Instr1         goto state 57
-	Def1           goto state 40
-	Def            goto state 58
-	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
+	Stmt           goto state 60
 
 State 68
 
@@ -1156,13 +1166,13 @@ State 68
 	Ident          goto state 44
 	SType          goto state 38
 	FType          goto state 39
-	Instr          goto state 160
+	Instr          goto state 161
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
+	Stmt           goto state 60
 
 State 69
 
@@ -1180,7 +1190,7 @@ State 69
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr1          goto state 159
+	Expr1          goto state 160
 
 State 70
 
@@ -1198,7 +1208,7 @@ State 70
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr1          goto state 158
+	Expr1          goto state 159
 
 State 71
 
@@ -1216,7 +1226,7 @@ State 71
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr1          goto state 157
+	Expr1          goto state 158
 
 State 72
 
@@ -1234,7 +1244,7 @@ State 72
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr1          goto state 156
+	Expr1          goto state 157
 
 State 73
 
@@ -1252,11 +1262,30 @@ State 73
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr1          goto state 155
+	Expr1          goto state 156
 
 State 74
 
-	Stmt1 -> 'while' '(' . Expr ')' '{' Instr '}'       (rule 70)
+	Stmt1 -> 'while' '(' . Expr ')' '{' Instr '}'       (rule 77)
+
+	'!'            shift, and enter state 26
+	'('            shift, and enter state 27
+	'++'           shift, and enter state 28
+	'--'           shift, and enter state 29
+	'false'        shift, and enter state 30
+	'true'         shift, and enter state 31
+	L_Ident        shift, and enter state 10
+	L_integ        shift, and enter state 33
+
+	Ident          goto state 19
+	Integer        goto state 20
+	Expr2          goto state 21
+	Expr           goto state 155
+	Expr1          goto state 23
+
+State 75
+
+	Stmt1 -> 'return' '(' . Expr ')'                    (rule 80)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1273,9 +1302,9 @@ State 74
 	Expr           goto state 154
 	Expr1          goto state 23
 
-State 75
+State 76
 
-	Stmt1 -> 'return' '(' . Expr ')'                    (rule 73)
+	Stmt1 -> 'print' '(' . Expr ')'                     (rule 81)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1292,9 +1321,10 @@ State 75
 	Expr           goto state 153
 	Expr1          goto state 23
 
-State 76
+State 77
 
-	Stmt1 -> 'print' '(' . Expr ')'                     (rule 74)
+	Stmt1 -> 'if' '(' . Expr ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' . Expr ')' '{' Instr '}'          (rule 76)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1311,10 +1341,24 @@ State 76
 	Expr           goto state 152
 	Expr1          goto state 23
 
-State 77
+State 78
 
-	Stmt1 -> 'if' '(' . Expr ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' . Expr ')' '{' Instr '}'          (rule 69)
+	Stmt1 -> 'for' '(' . Ident '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 78)
+
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 151
+
+State 79
+
+	Stmt1 -> 'continue' 'outer' . '(' Expr ')'          (rule 84)
+
+	'('            shift, and enter state 150
+
+
+State 80
+
+	Stmt1 -> 'break' '(' . Expr ')'                     (rule 82)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1328,27 +1372,12 @@ State 77
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 151
+	Expr           goto state 149
 	Expr1          goto state 23
 
-State 78
+State 81
 
-	Stmt1 -> 'for' '(' . Ident '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 71)
-
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 150
-
-State 79
-
-	Stmt1 -> 'continue' 'outer' . '(' Expr ')'          (rule 77)
-
-	'('            shift, and enter state 149
-
-
-State 80
-
-	Stmt1 -> 'break' '(' . Expr ')'                     (rule 75)
+	Stmt1 -> Ident '%=' . Expr                          (rule 91)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1365,9 +1394,9 @@ State 80
 	Expr           goto state 148
 	Expr1          goto state 23
 
-State 81
+State 82
 
-	Stmt1 -> Ident '%=' . Expr                          (rule 84)
+	Stmt1 -> Ident '*=' . Expr                          (rule 89)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1384,9 +1413,9 @@ State 81
 	Expr           goto state 147
 	Expr1          goto state 23
 
-State 82
+State 83
 
-	Stmt1 -> Ident '*=' . Expr                          (rule 82)
+	Stmt1 -> Ident '+=' . Expr                          (rule 87)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1403,9 +1432,9 @@ State 82
 	Expr           goto state 146
 	Expr1          goto state 23
 
-State 83
+State 84
 
-	Stmt1 -> Ident '+=' . Expr                          (rule 80)
+	Stmt1 -> Ident '-=' . Expr                          (rule 88)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1422,9 +1451,9 @@ State 83
 	Expr           goto state 145
 	Expr1          goto state 23
 
-State 84
+State 85
 
-	Stmt1 -> Ident '-=' . Expr                          (rule 81)
+	Stmt1 -> Ident '/=' . Expr                          (rule 90)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1441,9 +1470,9 @@ State 84
 	Expr           goto state 144
 	Expr1          goto state 23
 
-State 85
+State 86
 
-	Stmt1 -> Ident '/=' . Expr                          (rule 83)
+	Stmt1 -> Ident '=' . Expr                           (rule 86)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1460,9 +1489,9 @@ State 85
 	Expr           goto state 143
 	Expr1          goto state 23
 
-State 86
+State 87
 
-	Stmt1 -> Ident '=' . Expr                           (rule 79)
+	Stmt1 -> Ident '[' . Expr ']' '=' '(' Expr ')'      (rule 92)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1479,84 +1508,73 @@ State 86
 	Expr           goto state 142
 	Expr1          goto state 23
 
-State 87
-
-	Stmt1 -> Ident '[' . Expr ']' '=' '(' Expr ')'      (rule 85)
-
-	'!'            shift, and enter state 26
-	'('            shift, and enter state 27
-	'++'           shift, and enter state 28
-	'--'           shift, and enter state 29
-	'false'        shift, and enter state 30
-	'true'         shift, and enter state 31
-	L_Ident        shift, and enter state 10
-	L_integ        shift, and enter state 33
-
-	Ident          goto state 19
-	Integer        goto state 20
-	Expr2          goto state 21
-	Expr           goto state 141
-	Expr1          goto state 23
-
 State 88
 
-	Stmt1 -> Ident 'set' . '[' Expr ']' 'to' '(' Expr ')'    (rule 86)
+	Stmt1 -> Ident 'set' . '[' Expr ']' 'to' '(' Expr ')'    (rule 93)
 
-	'['            shift, and enter state 140
+	'['            shift, and enter state 141
 
 
 State 89
 
-	Def1 -> 'Dict' SType . Ident                        (rule 66)
+	Def1 -> 'Dict' SType . Ident                        (rule 74)
+
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 140
+
+State 90
+
+	Def1 -> 'Array' SType . Ident '[' Expr ']' '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' SType . Ident '[' Expr ']'          (rule 73)
 
 	L_Ident        shift, and enter state 10
 
 	Ident          goto state 139
 
-State 90
-
-	Def1 -> 'Array' SType . Ident '[' Expr ']' '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' SType . Ident '[' Expr ']'          (rule 65)
-
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 138
-
 State 91
 
-	Def1 -> FType Ident . '(' Params ')' '{' Instr '}'    (rule 63)
+	Def -> Def ';' .                                    (rule 62)
 
-	'('            shift, and enter state 137
+	';'            reduce using rule 62
+	%eof           reduce using rule 62
 
 
 State 92
 
-	Def1 -> SType Ident . '=' Expr                      (rule 62)
+	Def1 -> FType Ident . '(' Params ')' '{' Instr '}'    (rule 71)
 
-	'='            shift, and enter state 136
+	'('            shift, and enter state 138
 
 
 State 93
+
+	Def1 -> SType Ident . '=' Expr                      (rule 70)
+
+	'='            shift, and enter state 137
+
+
+State 94
 
 	Params -> FType Ident .                             (rule 52)
 	Params -> FType Ident . ',' Params                  (rule 54)
 
 	')'            reduce using rule 52
-	','            shift, and enter state 135
+	','            shift, and enter state 136
 	%eof           reduce using rule 52
 
 
-State 94
+State 95
 
 	Params -> SType Ident .                             (rule 51)
 	Params -> SType Ident . ',' Params                  (rule 53)
 
 	')'            reduce using rule 51
-	','            shift, and enter state 134
+	','            shift, and enter state 135
 	%eof           reduce using rule 51
 
 
-State 95
+State 96
 
 	Expr2 -> '--' Ident .                               (rule 21)
 
@@ -1583,7 +1601,7 @@ State 95
 	%eof           reduce using rule 21
 
 
-State 96
+State 97
 
 	Expr2 -> '++' Ident .                               (rule 19)
 
@@ -1610,7 +1628,7 @@ State 96
 	%eof           reduce using rule 19
 
 
-State 97
+State 98
 
 	Expr2 -> '(' Expr . ')'                             (rule 24)
 	Expr -> Expr . '+' Expr1                            (rule 29)
@@ -1619,7 +1637,7 @@ State 97
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
 
-	')'            shift, and enter state 133
+	')'            shift, and enter state 134
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -1627,7 +1645,7 @@ State 97
 	'xor'          shift, and enter state 73
 
 
-State 98
+State 99
 
 	Expr2 -> '!' Expr2 .                                (rule 27)
 
@@ -1654,7 +1672,7 @@ State 98
 	%eof           reduce using rule 27
 
 
-State 99
+State 100
 
 	Args -> Lambda ',' . Args                           (rule 49)
 
@@ -1676,10 +1694,10 @@ State 99
 	Expr2          goto state 21
 	Expr           goto state 22
 	Expr1          goto state 23
-	Args           goto state 132
+	Args           goto state 133
 	Lambda         goto state 25
 
-State 100
+State 101
 
 	Expr1 -> Expr1 '!=' . Expr2                         (rule 44)
 
@@ -1694,9 +1712,9 @@ State 100
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 131
+	Expr2          goto state 132
 
-State 101
+State 102
 
 	Expr1 -> Expr1 '%' . Expr2                          (rule 37)
 
@@ -1711,9 +1729,9 @@ State 101
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 130
+	Expr2          goto state 131
 
-State 102
+State 103
 
 	Expr1 -> Expr1 '*' . Expr2                          (rule 36)
 
@@ -1728,9 +1746,9 @@ State 102
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 129
+	Expr2          goto state 130
 
-State 103
+State 104
 
 	Expr1 -> Expr1 '/' . Expr2                          (rule 35)
 
@@ -1745,9 +1763,9 @@ State 103
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 128
+	Expr2          goto state 129
 
-State 104
+State 105
 
 	Expr1 -> Expr1 '<' . Expr2                          (rule 42)
 
@@ -1762,9 +1780,9 @@ State 104
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 127
+	Expr2          goto state 128
 
-State 105
+State 106
 
 	Expr1 -> Expr1 '<=' . Expr2                         (rule 40)
 
@@ -1779,9 +1797,9 @@ State 105
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 126
+	Expr2          goto state 127
 
-State 106
+State 107
 
 	Expr1 -> Expr1 '==' . Expr2                         (rule 39)
 
@@ -1796,9 +1814,9 @@ State 106
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 125
+	Expr2          goto state 126
 
-State 107
+State 108
 
 	Expr1 -> Expr1 '>' . Expr2                          (rule 43)
 
@@ -1813,9 +1831,9 @@ State 107
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 124
+	Expr2          goto state 125
 
-State 108
+State 109
 
 	Expr1 -> Expr1 '>=' . Expr2                         (rule 41)
 
@@ -1830,11 +1848,36 @@ State 108
 
 	Ident          goto state 19
 	Integer        goto state 20
-	Expr2          goto state 123
+	Expr2          goto state 124
 
-State 109
+State 110
 
 	Args -> Expr ',' . Args                             (rule 47)
+
+	'!'            shift, and enter state 26
+	'('            shift, and enter state 27
+	'++'           shift, and enter state 28
+	'--'           shift, and enter state 29
+	'BoolFunc'     shift, and enter state 12
+	'IntFunc'      shift, and enter state 13
+	'false'        shift, and enter state 30
+	'true'         shift, and enter state 31
+	'void'         shift, and enter state 32
+	L_Ident        shift, and enter state 10
+	L_integ        shift, and enter state 33
+
+	Ident          goto state 19
+	Integer        goto state 20
+	FType          goto state 17
+	Expr2          goto state 21
+	Expr           goto state 22
+	Expr1          goto state 23
+	Args           goto state 123
+	Lambda         goto state 25
+
+State 111
+
+	Expr2 -> Ident '(' . Args ')'                       (rule 15)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1857,32 +1900,7 @@ State 109
 	Args           goto state 122
 	Lambda         goto state 25
 
-State 110
-
-	Expr2 -> Ident '(' . Args ')'                       (rule 15)
-
-	'!'            shift, and enter state 26
-	'('            shift, and enter state 27
-	'++'           shift, and enter state 28
-	'--'           shift, and enter state 29
-	'BoolFunc'     shift, and enter state 12
-	'IntFunc'      shift, and enter state 13
-	'false'        shift, and enter state 30
-	'true'         shift, and enter state 31
-	'void'         shift, and enter state 32
-	L_Ident        shift, and enter state 10
-	L_integ        shift, and enter state 33
-
-	Ident          goto state 19
-	Integer        goto state 20
-	FType          goto state 17
-	Expr2          goto state 21
-	Expr           goto state 22
-	Expr1          goto state 23
-	Args           goto state 121
-	Lambda         goto state 25
-
-State 111
+State 112
 
 	Expr2 -> Ident '++' .                               (rule 18)
 
@@ -1909,7 +1927,7 @@ State 111
 	%eof           reduce using rule 18
 
 
-State 112
+State 113
 
 	Expr2 -> Ident '--' .                               (rule 20)
 
@@ -1936,7 +1954,7 @@ State 112
 	%eof           reduce using rule 20
 
 
-State 113
+State 114
 
 	Expr2 -> Ident '[' . Expr ']'                       (rule 22)
 
@@ -1952,31 +1970,31 @@ State 113
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 120
+	Expr           goto state 121
 	Expr1          goto state 23
-
-State 114
-
-	Expr2 -> Ident 'get' . '[' Expr ']'                 (rule 23)
-
-	'['            shift, and enter state 119
-
 
 State 115
 
-	Expr2 -> Ident 'has' . 'key' '[' Expr ']'           (rule 28)
+	Expr2 -> Ident 'get' . '[' Expr ']'                 (rule 23)
 
-	'key'          shift, and enter state 118
+	'['            shift, and enter state 120
 
 
 State 116
 
-	Lambda -> FType 'lambda' . '(' Params ')' '->' '{' Instr '}'    (rule 55)
+	Expr2 -> Ident 'has' . 'key' '[' Expr ']'           (rule 28)
 
-	'('            shift, and enter state 117
+	'key'          shift, and enter state 119
 
 
 State 117
+
+	Lambda -> FType 'lambda' . '(' Params ')' '->' '{' Instr '}'    (rule 55)
+
+	'('            shift, and enter state 118
+
+
+State 118
 
 	Lambda -> FType 'lambda' '(' . Params ')' '->' '{' Instr '}'    (rule 55)
 
@@ -1988,16 +2006,16 @@ State 117
 
 	SType          goto state 34
 	FType          goto state 35
-	Params         goto state 191
+	Params         goto state 192
 
-State 118
+State 119
 
 	Expr2 -> Ident 'has' 'key' . '[' Expr ']'           (rule 28)
 
-	'['            shift, and enter state 190
+	'['            shift, and enter state 191
 
 
-State 119
+State 120
 
 	Expr2 -> Ident 'get' '[' . Expr ']'                 (rule 23)
 
@@ -2013,10 +2031,10 @@ State 119
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 189
+	Expr           goto state 190
 	Expr1          goto state 23
 
-State 120
+State 121
 
 	Expr2 -> Ident '[' Expr . ']'                       (rule 22)
 	Expr -> Expr . '+' Expr1                            (rule 29)
@@ -2027,20 +2045,20 @@ State 120
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	']'            shift, and enter state 188
+	']'            shift, and enter state 189
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
 
 
-State 121
+State 122
 
 	Expr2 -> Ident '(' Args . ')'                       (rule 15)
 
-	')'            shift, and enter state 187
+	')'            shift, and enter state 188
 
 
-State 122
+State 123
 
 	Args -> Expr ',' Args .                             (rule 47)
 
@@ -2048,7 +2066,7 @@ State 122
 	%eof           reduce using rule 47
 
 
-State 123
+State 124
 
 	Expr1 -> Expr1 '>=' Expr2 .                         (rule 41)
 
@@ -2075,7 +2093,7 @@ State 123
 	%eof           reduce using rule 41
 
 
-State 124
+State 125
 
 	Expr1 -> Expr1 '>' Expr2 .                          (rule 43)
 
@@ -2102,7 +2120,7 @@ State 124
 	%eof           reduce using rule 43
 
 
-State 125
+State 126
 
 	Expr1 -> Expr1 '==' Expr2 .                         (rule 39)
 
@@ -2129,7 +2147,7 @@ State 125
 	%eof           reduce using rule 39
 
 
-State 126
+State 127
 
 	Expr1 -> Expr1 '<=' Expr2 .                         (rule 40)
 
@@ -2156,7 +2174,7 @@ State 126
 	%eof           reduce using rule 40
 
 
-State 127
+State 128
 
 	Expr1 -> Expr1 '<' Expr2 .                          (rule 42)
 
@@ -2183,7 +2201,7 @@ State 127
 	%eof           reduce using rule 42
 
 
-State 128
+State 129
 
 	Expr1 -> Expr1 '/' Expr2 .                          (rule 35)
 
@@ -2210,7 +2228,7 @@ State 128
 	%eof           reduce using rule 35
 
 
-State 129
+State 130
 
 	Expr1 -> Expr1 '*' Expr2 .                          (rule 36)
 
@@ -2237,7 +2255,7 @@ State 129
 	%eof           reduce using rule 36
 
 
-State 130
+State 131
 
 	Expr1 -> Expr1 '%' Expr2 .                          (rule 37)
 
@@ -2264,7 +2282,7 @@ State 130
 	%eof           reduce using rule 37
 
 
-State 131
+State 132
 
 	Expr1 -> Expr1 '!=' Expr2 .                         (rule 44)
 
@@ -2291,7 +2309,7 @@ State 131
 	%eof           reduce using rule 44
 
 
-State 132
+State 133
 
 	Args -> Lambda ',' Args .                           (rule 49)
 
@@ -2299,7 +2317,7 @@ State 132
 	%eof           reduce using rule 49
 
 
-State 133
+State 134
 
 	Expr2 -> '(' Expr ')' .                             (rule 24)
 
@@ -2326,7 +2344,7 @@ State 133
 	%eof           reduce using rule 24
 
 
-State 134
+State 135
 
 	Params -> SType Ident ',' . Params                  (rule 53)
 
@@ -2338,9 +2356,9 @@ State 134
 
 	SType          goto state 34
 	FType          goto state 35
-	Params         goto state 186
+	Params         goto state 187
 
-State 135
+State 136
 
 	Params -> FType Ident ',' . Params                  (rule 54)
 
@@ -2352,11 +2370,11 @@ State 135
 
 	SType          goto state 34
 	FType          goto state 35
-	Params         goto state 185
+	Params         goto state 186
 
-State 136
+State 137
 
-	Def1 -> SType Ident '=' . Expr                      (rule 62)
+	Def1 -> SType Ident '=' . Expr                      (rule 70)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -2370,12 +2388,12 @@ State 136
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 184
+	Expr           goto state 185
 	Expr1          goto state 23
 
-State 137
+State 138
 
-	Def1 -> FType Ident '(' . Params ')' '{' Instr '}'    (rule 63)
+	Def1 -> FType Ident '(' . Params ')' '{' Instr '}'    (rule 71)
 
 	'Bool'         shift, and enter state 15
 	'BoolFunc'     shift, and enter state 12
@@ -2385,27 +2403,27 @@ State 137
 
 	SType          goto state 34
 	FType          goto state 35
-	Params         goto state 183
-
-State 138
-
-	Def1 -> 'Array' SType Ident . '[' Expr ']' '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' SType Ident . '[' Expr ']'          (rule 65)
-
-	'['            shift, and enter state 182
-
+	Params         goto state 184
 
 State 139
 
-	Def1 -> 'Dict' SType Ident .                        (rule 66)
+	Def1 -> 'Array' SType Ident . '[' Expr ']' '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' SType Ident . '[' Expr ']'          (rule 73)
 
-	';'            reduce using rule 66
-	%eof           reduce using rule 66
+	'['            shift, and enter state 183
 
 
 State 140
 
-	Stmt1 -> Ident 'set' '[' . Expr ']' 'to' '(' Expr ')'    (rule 86)
+	Def1 -> 'Dict' SType Ident .                        (rule 74)
+
+	';'            reduce using rule 74
+	%eof           reduce using rule 74
+
+
+State 141
+
+	Stmt1 -> Ident 'set' '[' . Expr ']' 'to' '(' Expr ')'    (rule 93)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -2419,25 +2437,8 @@ State 140
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 181
+	Expr           goto state 182
 	Expr1          goto state 23
-
-State 141
-
-	Expr -> Expr . '+' Expr1                            (rule 29)
-	Expr -> Expr . '-' Expr1                            (rule 30)
-	Expr -> Expr . 'or' Expr1                           (rule 32)
-	Expr -> Expr . 'and' Expr1                          (rule 33)
-	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '[' Expr . ']' '=' '(' Expr ')'      (rule 85)
-
-	'+'            shift, and enter state 69
-	'-'            shift, and enter state 70
-	']'            shift, and enter state 180
-	'and'          shift, and enter state 71
-	'or'           shift, and enter state 72
-	'xor'          shift, and enter state 73
-
 
 State 142
 
@@ -2446,16 +2447,14 @@ State 142
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '=' Expr .                           (rule 79)
+	Stmt1 -> Ident '[' Expr . ']' '=' '(' Expr ')'      (rule 92)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 79
+	']'            shift, and enter state 181
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 79
-	%eof           reduce using rule 79
 
 
 State 143
@@ -2465,16 +2464,16 @@ State 143
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '/=' Expr .                          (rule 83)
+	Stmt1 -> Ident '=' Expr .                           (rule 86)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 83
+	';'            reduce using rule 86
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 83
-	%eof           reduce using rule 83
+	'}'            reduce using rule 86
+	%eof           reduce using rule 86
 
 
 State 144
@@ -2484,16 +2483,16 @@ State 144
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '-=' Expr .                          (rule 81)
+	Stmt1 -> Ident '/=' Expr .                          (rule 90)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 81
+	';'            reduce using rule 90
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 81
-	%eof           reduce using rule 81
+	'}'            reduce using rule 90
+	%eof           reduce using rule 90
 
 
 State 145
@@ -2503,16 +2502,16 @@ State 145
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '+=' Expr .                          (rule 80)
+	Stmt1 -> Ident '-=' Expr .                          (rule 88)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 80
+	';'            reduce using rule 88
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 80
-	%eof           reduce using rule 80
+	'}'            reduce using rule 88
+	%eof           reduce using rule 88
 
 
 State 146
@@ -2522,16 +2521,16 @@ State 146
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '*=' Expr .                          (rule 82)
+	Stmt1 -> Ident '+=' Expr .                          (rule 87)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 82
+	';'            reduce using rule 87
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 82
-	%eof           reduce using rule 82
+	'}'            reduce using rule 87
+	%eof           reduce using rule 87
 
 
 State 147
@@ -2541,16 +2540,16 @@ State 147
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '%=' Expr .                          (rule 84)
+	Stmt1 -> Ident '*=' Expr .                          (rule 89)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 84
+	';'            reduce using rule 89
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	'}'            reduce using rule 84
-	%eof           reduce using rule 84
+	'}'            reduce using rule 89
+	%eof           reduce using rule 89
 
 
 State 148
@@ -2560,9 +2559,28 @@ State 148
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'break' '(' Expr . ')'                     (rule 75)
+	Stmt1 -> Ident '%=' Expr .                          (rule 91)
 
-	')'            shift, and enter state 179
+	'+'            shift, and enter state 69
+	'-'            shift, and enter state 70
+	';'            reduce using rule 91
+	'and'          shift, and enter state 71
+	'or'           shift, and enter state 72
+	'xor'          shift, and enter state 73
+	'}'            reduce using rule 91
+	%eof           reduce using rule 91
+
+
+State 149
+
+	Expr -> Expr . '+' Expr1                            (rule 29)
+	Expr -> Expr . '-' Expr1                            (rule 30)
+	Expr -> Expr . 'or' Expr1                           (rule 32)
+	Expr -> Expr . 'and' Expr1                          (rule 33)
+	Expr -> Expr . 'xor' Expr1                          (rule 34)
+	Stmt1 -> 'break' '(' Expr . ')'                     (rule 82)
+
+	')'            shift, and enter state 180
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -2570,9 +2588,9 @@ State 148
 	'xor'          shift, and enter state 73
 
 
-State 149
+State 150
 
-	Stmt1 -> 'continue' 'outer' '(' . Expr ')'          (rule 77)
+	Stmt1 -> 'continue' 'outer' '(' . Expr ')'          (rule 84)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -2586,32 +2604,14 @@ State 149
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 178
+	Expr           goto state 179
 	Expr1          goto state 23
-
-State 150
-
-	Stmt1 -> 'for' '(' Ident . '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 71)
-
-	'='            shift, and enter state 177
-
 
 State 151
 
-	Expr -> Expr . '+' Expr1                            (rule 29)
-	Expr -> Expr . '-' Expr1                            (rule 30)
-	Expr -> Expr . 'or' Expr1                           (rule 32)
-	Expr -> Expr . 'and' Expr1                          (rule 33)
-	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'if' '(' Expr . ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' Expr . ')' '{' Instr '}'          (rule 69)
+	Stmt1 -> 'for' '(' Ident . '=' Expr 'to' Expr ')' '{' Instr '}'    (rule 78)
 
-	')'            shift, and enter state 176
-	'+'            shift, and enter state 69
-	'-'            shift, and enter state 70
-	'and'          shift, and enter state 71
-	'or'           shift, and enter state 72
-	'xor'          shift, and enter state 73
+	'='            shift, and enter state 178
 
 
 State 152
@@ -2621,9 +2621,10 @@ State 152
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'print' '(' Expr . ')'                     (rule 74)
+	Stmt1 -> 'if' '(' Expr . ')' '{' Instr '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' Expr . ')' '{' Instr '}'          (rule 76)
 
-	')'            shift, and enter state 175
+	')'            shift, and enter state 177
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -2638,9 +2639,9 @@ State 153
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'return' '(' Expr . ')'                    (rule 73)
+	Stmt1 -> 'print' '(' Expr . ')'                     (rule 81)
 
-	')'            shift, and enter state 174
+	')'            shift, and enter state 176
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -2655,9 +2656,9 @@ State 154
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'while' '(' Expr . ')' '{' Instr '}'       (rule 70)
+	Stmt1 -> 'return' '(' Expr . ')'                    (rule 80)
 
-	')'            shift, and enter state 173
+	')'            shift, and enter state 175
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -2666,6 +2667,23 @@ State 154
 
 
 State 155
+
+	Expr -> Expr . '+' Expr1                            (rule 29)
+	Expr -> Expr . '-' Expr1                            (rule 30)
+	Expr -> Expr . 'or' Expr1                           (rule 32)
+	Expr -> Expr . 'and' Expr1                          (rule 33)
+	Expr -> Expr . 'xor' Expr1                          (rule 34)
+	Stmt1 -> 'while' '(' Expr . ')' '{' Instr '}'       (rule 77)
+
+	')'            shift, and enter state 174
+	'+'            shift, and enter state 69
+	'-'            shift, and enter state 70
+	'and'          shift, and enter state 71
+	'or'           shift, and enter state 72
+	'xor'          shift, and enter state 73
+
+
+State 156
 
 	Expr -> Expr 'xor' Expr1 .                          (rule 34)
 	Expr1 -> Expr1 . '/' Expr2                          (rule 35)
@@ -2678,20 +2696,20 @@ State 155
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 34
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 34
 	','            reduce using rule 34
 	'-'            reduce using rule 34
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 34
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 34
 	'and'          reduce using rule 34
 	'or'           reduce using rule 34
@@ -2701,7 +2719,7 @@ State 155
 	%eof           reduce using rule 34
 
 
-State 156
+State 157
 
 	Expr -> Expr 'or' Expr1 .                           (rule 32)
 	Expr1 -> Expr1 . '/' Expr2                          (rule 35)
@@ -2714,20 +2732,20 @@ State 156
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 32
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 32
 	','            reduce using rule 32
 	'-'            reduce using rule 32
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 32
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 32
 	'and'          reduce using rule 32
 	'or'           reduce using rule 32
@@ -2737,7 +2755,7 @@ State 156
 	%eof           reduce using rule 32
 
 
-State 157
+State 158
 
 	Expr -> Expr 'and' Expr1 .                          (rule 33)
 	Expr1 -> Expr1 . '/' Expr2                          (rule 35)
@@ -2750,20 +2768,20 @@ State 157
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 33
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 33
 	','            reduce using rule 33
 	'-'            reduce using rule 33
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 33
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 33
 	'and'          reduce using rule 33
 	'or'           reduce using rule 33
@@ -2773,7 +2791,7 @@ State 157
 	%eof           reduce using rule 33
 
 
-State 158
+State 159
 
 	Expr -> Expr '-' Expr1 .                            (rule 30)
 	Expr1 -> Expr1 . '/' Expr2                          (rule 35)
@@ -2786,20 +2804,20 @@ State 158
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 30
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 30
 	','            reduce using rule 30
 	'-'            reduce using rule 30
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 30
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 30
 	'and'          reduce using rule 30
 	'or'           reduce using rule 30
@@ -2809,7 +2827,7 @@ State 158
 	%eof           reduce using rule 30
 
 
-State 159
+State 160
 
 	Expr -> Expr '+' Expr1 .                            (rule 29)
 	Expr1 -> Expr1 . '/' Expr2                          (rule 35)
@@ -2822,20 +2840,20 @@ State 159
 	Expr1 -> Expr1 . '>' Expr2                          (rule 43)
 	Expr1 -> Expr1 . '!=' Expr2                         (rule 44)
 
-	'!='           shift, and enter state 100
-	'%'            shift, and enter state 101
+	'!='           shift, and enter state 101
+	'%'            shift, and enter state 102
 	')'            reduce using rule 29
-	'*'            shift, and enter state 102
+	'*'            shift, and enter state 103
 	'+'            reduce using rule 29
 	','            reduce using rule 29
 	'-'            reduce using rule 29
-	'/'            shift, and enter state 103
+	'/'            shift, and enter state 104
 	';'            reduce using rule 29
-	'<'            shift, and enter state 104
-	'<='           shift, and enter state 105
-	'=='           shift, and enter state 106
-	'>'            shift, and enter state 107
-	'>='           shift, and enter state 108
+	'<'            shift, and enter state 105
+	'<='           shift, and enter state 106
+	'=='           shift, and enter state 107
+	'>'            shift, and enter state 108
+	'>='           shift, and enter state 109
 	']'            reduce using rule 29
 	'and'          reduce using rule 29
 	'or'           reduce using rule 29
@@ -2845,7 +2863,7 @@ State 159
 	%eof           reduce using rule 29
 
 
-State 160
+State 161
 
 	Instr -> Instr1 ';' Instr .                         (rule 56)
 
@@ -2853,7 +2871,7 @@ State 160
 	%eof           reduce using rule 56
 
 
-State 161
+State 162
 
 	Instr -> Def ';' Instr .                            (rule 57)
 
@@ -2861,7 +2879,7 @@ State 161
 	%eof           reduce using rule 57
 
 
-State 162
+State 163
 
 	Instr -> SpecStmt ';' Instr .                       (rule 58)
 
@@ -2869,117 +2887,117 @@ State 162
 	%eof           reduce using rule 58
 
 
-State 163
+State 164
 
-	SpecStmt -> 'debug' 'reading' 'disable' . Ident     (rule 92)
+	SpecStmt -> 'debug' 'reading' 'disable' . Ident     (rule 69)
+
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 173
+
+State 165
+
+	SpecStmt -> 'debug' 'reading' 'enable' . Ident      (rule 68)
 
 	L_Ident        shift, and enter state 10
 
 	Ident          goto state 172
 
-State 164
+State 166
 
-	SpecStmt -> 'debug' 'reading' 'enable' . Ident      (rule 91)
+	SpecStmt -> 'debug' 'assignment' 'disable' . Ident    (rule 67)
 
 	L_Ident        shift, and enter state 10
 
 	Ident          goto state 171
 
-State 165
+State 167
 
-	SpecStmt -> 'debug' 'assignment' 'disable' . Ident    (rule 90)
+	SpecStmt -> 'debug' 'assignment' 'enable' . Ident    (rule 66)
 
 	L_Ident        shift, and enter state 10
 
 	Ident          goto state 170
 
-State 166
-
-	SpecStmt -> 'debug' 'assignment' 'enable' . Ident    (rule 89)
-
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 169
-
-State 167
-
-	SpecStmt -> 'swap' '(' Ident . ',' Ident ')'        (rule 88)
-
-	','            shift, and enter state 168
-
-
 State 168
 
-	SpecStmt -> 'swap' '(' Ident ',' . Ident ')'        (rule 88)
+	SpecStmt -> 'swap' '(' Ident . ',' Ident ')'        (rule 65)
 
-	L_Ident        shift, and enter state 10
+	','            shift, and enter state 169
 
-	Ident          goto state 203
 
 State 169
 
-	SpecStmt -> 'debug' 'assignment' 'enable' Ident .    (rule 89)
+	SpecStmt -> 'swap' '(' Ident ',' . Ident ')'        (rule 65)
 
-	';'            reduce using rule 89
+	L_Ident        shift, and enter state 10
 
+	Ident          goto state 204
 
 State 170
 
-	SpecStmt -> 'debug' 'assignment' 'disable' Ident .    (rule 90)
+	SpecStmt -> 'debug' 'assignment' 'enable' Ident .    (rule 66)
 
-	';'            reduce using rule 90
+	';'            reduce using rule 66
 
 
 State 171
 
-	SpecStmt -> 'debug' 'reading' 'enable' Ident .      (rule 91)
+	SpecStmt -> 'debug' 'assignment' 'disable' Ident .    (rule 67)
 
-	';'            reduce using rule 91
+	';'            reduce using rule 67
 
 
 State 172
 
-	SpecStmt -> 'debug' 'reading' 'disable' Ident .     (rule 92)
+	SpecStmt -> 'debug' 'reading' 'enable' Ident .      (rule 68)
 
-	';'            reduce using rule 92
+	';'            reduce using rule 68
 
 
 State 173
 
-	Stmt1 -> 'while' '(' Expr ')' . '{' Instr '}'       (rule 70)
+	SpecStmt -> 'debug' 'reading' 'disable' Ident .     (rule 69)
 
-	'{'            shift, and enter state 202
+	';'            reduce using rule 69
 
 
 State 174
 
-	Stmt1 -> 'return' '(' Expr ')' .                    (rule 73)
+	Stmt1 -> 'while' '(' Expr ')' . '{' Instr '}'       (rule 77)
 
-	';'            reduce using rule 73
-	'}'            reduce using rule 73
-	%eof           reduce using rule 73
+	'{'            shift, and enter state 203
 
 
 State 175
 
-	Stmt1 -> 'print' '(' Expr ')' .                     (rule 74)
+	Stmt1 -> 'return' '(' Expr ')' .                    (rule 80)
 
-	';'            reduce using rule 74
-	'}'            reduce using rule 74
-	%eof           reduce using rule 74
+	';'            reduce using rule 80
+	'}'            reduce using rule 80
+	%eof           reduce using rule 80
 
 
 State 176
 
-	Stmt1 -> 'if' '(' Expr ')' . '{' Instr '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' Expr ')' . '{' Instr '}'          (rule 69)
+	Stmt1 -> 'print' '(' Expr ')' .                     (rule 81)
 
-	'{'            shift, and enter state 201
+	';'            reduce using rule 81
+	'}'            reduce using rule 81
+	%eof           reduce using rule 81
 
 
 State 177
 
-	Stmt1 -> 'for' '(' Ident '=' . Expr 'to' Expr ')' '{' Instr '}'    (rule 71)
+	Stmt1 -> 'if' '(' Expr ')' . '{' Instr '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' Expr ')' . '{' Instr '}'          (rule 76)
+
+	'{'            shift, and enter state 202
+
+
+State 178
+
+	Stmt1 -> 'for' '(' Ident '=' . Expr 'to' Expr ')' '{' Instr '}'    (rule 78)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -2993,63 +3011,63 @@ State 177
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 200
+	Expr           goto state 201
 	Expr1          goto state 23
 
-State 178
+State 179
 
 	Expr -> Expr . '+' Expr1                            (rule 29)
 	Expr -> Expr . '-' Expr1                            (rule 30)
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'continue' 'outer' '(' Expr . ')'          (rule 77)
+	Stmt1 -> 'continue' 'outer' '(' Expr . ')'          (rule 84)
 
-	')'            shift, and enter state 199
+	')'            shift, and enter state 200
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-
-
-State 179
-
-	Stmt1 -> 'break' '(' Expr ')' .                     (rule 75)
-
-	';'            reduce using rule 75
-	'}'            reduce using rule 75
-	%eof           reduce using rule 75
 
 
 State 180
 
-	Stmt1 -> Ident '[' Expr ']' . '=' '(' Expr ')'      (rule 85)
+	Stmt1 -> 'break' '(' Expr ')' .                     (rule 82)
 
-	'='            shift, and enter state 198
+	';'            reduce using rule 82
+	'}'            reduce using rule 82
+	%eof           reduce using rule 82
 
 
 State 181
+
+	Stmt1 -> Ident '[' Expr ']' . '=' '(' Expr ')'      (rule 92)
+
+	'='            shift, and enter state 199
+
+
+State 182
 
 	Expr -> Expr . '+' Expr1                            (rule 29)
 	Expr -> Expr . '-' Expr1                            (rule 30)
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident 'set' '[' Expr . ']' 'to' '(' Expr ')'    (rule 86)
+	Stmt1 -> Ident 'set' '[' Expr . ']' 'to' '(' Expr ')'    (rule 93)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	']'            shift, and enter state 197
+	']'            shift, and enter state 198
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
 
 
-State 182
+State 183
 
-	Def1 -> 'Array' SType Ident '[' . Expr ']' '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' SType Ident '[' . Expr ']'          (rule 65)
+	Def1 -> 'Array' SType Ident '[' . Expr ']' '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' SType Ident '[' . Expr ']'          (rule 73)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -3063,35 +3081,35 @@ State 182
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 196
+	Expr           goto state 197
 	Expr1          goto state 23
 
-State 183
-
-	Def1 -> FType Ident '(' Params . ')' '{' Instr '}'    (rule 63)
-
-	')'            shift, and enter state 195
-
-
 State 184
+
+	Def1 -> FType Ident '(' Params . ')' '{' Instr '}'    (rule 71)
+
+	')'            shift, and enter state 196
+
+
+State 185
 
 	Expr -> Expr . '+' Expr1                            (rule 29)
 	Expr -> Expr . '-' Expr1                            (rule 30)
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Def1 -> SType Ident '=' Expr .                      (rule 62)
+	Def1 -> SType Ident '=' Expr .                      (rule 70)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	';'            reduce using rule 62
+	';'            reduce using rule 70
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
-	%eof           reduce using rule 62
+	%eof           reduce using rule 70
 
 
-State 185
+State 186
 
 	Params -> FType Ident ',' Params .                  (rule 54)
 
@@ -3099,7 +3117,7 @@ State 185
 	%eof           reduce using rule 54
 
 
-State 186
+State 187
 
 	Params -> SType Ident ',' Params .                  (rule 53)
 
@@ -3107,7 +3125,7 @@ State 186
 	%eof           reduce using rule 53
 
 
-State 187
+State 188
 
 	Expr2 -> Ident '(' Args ')' .                       (rule 15)
 
@@ -3134,7 +3152,7 @@ State 187
 	%eof           reduce using rule 15
 
 
-State 188
+State 189
 
 	Expr2 -> Ident '[' Expr ']' .                       (rule 22)
 
@@ -3161,7 +3179,7 @@ State 188
 	%eof           reduce using rule 22
 
 
-State 189
+State 190
 
 	Expr2 -> Ident 'get' '[' Expr . ']'                 (rule 23)
 	Expr -> Expr . '+' Expr1                            (rule 29)
@@ -3172,13 +3190,13 @@ State 189
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	']'            shift, and enter state 194
+	']'            shift, and enter state 195
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
 
 
-State 190
+State 191
 
 	Expr2 -> Ident 'has' 'key' '[' . Expr ']'           (rule 28)
 
@@ -3194,24 +3212,24 @@ State 190
 	Ident          goto state 19
 	Integer        goto state 20
 	Expr2          goto state 21
-	Expr           goto state 193
+	Expr           goto state 194
 	Expr1          goto state 23
-
-State 191
-
-	Lambda -> FType 'lambda' '(' Params . ')' '->' '{' Instr '}'    (rule 55)
-
-	')'            shift, and enter state 192
-
 
 State 192
 
-	Lambda -> FType 'lambda' '(' Params ')' . '->' '{' Instr '}'    (rule 55)
+	Lambda -> FType 'lambda' '(' Params . ')' '->' '{' Instr '}'    (rule 55)
 
-	'->'           shift, and enter state 213
+	')'            shift, and enter state 193
 
 
 State 193
+
+	Lambda -> FType 'lambda' '(' Params ')' . '->' '{' Instr '}'    (rule 55)
+
+	'->'           shift, and enter state 214
+
+
+State 194
 
 	Expr2 -> Ident 'has' 'key' '[' Expr . ']'           (rule 28)
 	Expr -> Expr . '+' Expr1                            (rule 29)
@@ -3222,13 +3240,13 @@ State 193
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
-	']'            shift, and enter state 212
+	']'            shift, and enter state 213
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
 
 
-State 194
+State 195
 
 	Expr2 -> Ident 'get' '[' Expr ']' .                 (rule 23)
 
@@ -3255,75 +3273,108 @@ State 194
 	%eof           reduce using rule 23
 
 
-State 195
-
-	Def1 -> FType Ident '(' Params ')' . '{' Instr '}'    (rule 63)
-
-	'{'            shift, and enter state 211
-
-
 State 196
 
-	Expr -> Expr . '+' Expr1                            (rule 29)
-	Expr -> Expr . '-' Expr1                            (rule 30)
-	Expr -> Expr . 'or' Expr1                           (rule 32)
-	Expr -> Expr . 'and' Expr1                          (rule 33)
-	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Def1 -> 'Array' SType Ident '[' Expr . ']' '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' SType Ident '[' Expr . ']'          (rule 65)
+	Def1 -> FType Ident '(' Params ')' . '{' Instr '}'    (rule 71)
 
-	'+'            shift, and enter state 69
-	'-'            shift, and enter state 70
-	']'            shift, and enter state 210
-	'and'          shift, and enter state 71
-	'or'           shift, and enter state 72
-	'xor'          shift, and enter state 73
+	'{'            shift, and enter state 212
 
 
 State 197
 
-	Stmt1 -> Ident 'set' '[' Expr ']' . 'to' '(' Expr ')'    (rule 86)
+	Expr -> Expr . '+' Expr1                            (rule 29)
+	Expr -> Expr . '-' Expr1                            (rule 30)
+	Expr -> Expr . 'or' Expr1                           (rule 32)
+	Expr -> Expr . 'and' Expr1                          (rule 33)
+	Expr -> Expr . 'xor' Expr1                          (rule 34)
+	Def1 -> 'Array' SType Ident '[' Expr . ']' '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' SType Ident '[' Expr . ']'          (rule 73)
 
-	'to'           shift, and enter state 209
+	'+'            shift, and enter state 69
+	'-'            shift, and enter state 70
+	']'            shift, and enter state 211
+	'and'          shift, and enter state 71
+	'or'           shift, and enter state 72
+	'xor'          shift, and enter state 73
 
 
 State 198
 
-	Stmt1 -> Ident '[' Expr ']' '=' . '(' Expr ')'      (rule 85)
+	Stmt1 -> Ident 'set' '[' Expr ']' . 'to' '(' Expr ')'    (rule 93)
 
-	'('            shift, and enter state 208
+	'to'           shift, and enter state 210
 
 
 State 199
 
-	Stmt1 -> 'continue' 'outer' '(' Expr ')' .          (rule 77)
+	Stmt1 -> Ident '[' Expr ']' '=' . '(' Expr ')'      (rule 92)
 
-	';'            reduce using rule 77
-	'}'            reduce using rule 77
-	%eof           reduce using rule 77
+	'('            shift, and enter state 209
 
 
 State 200
+
+	Stmt1 -> 'continue' 'outer' '(' Expr ')' .          (rule 84)
+
+	';'            reduce using rule 84
+	'}'            reduce using rule 84
+	%eof           reduce using rule 84
+
+
+State 201
 
 	Expr -> Expr . '+' Expr1                            (rule 29)
 	Expr -> Expr . '-' Expr1                            (rule 30)
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'for' '(' Ident '=' Expr . 'to' Expr ')' '{' Instr '}'    (rule 71)
+	Stmt1 -> 'for' '(' Ident '=' Expr . 'to' Expr ')' '{' Instr '}'    (rule 78)
 
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
-	'to'           shift, and enter state 207
+	'to'           shift, and enter state 208
 	'xor'          shift, and enter state 73
 
 
-State 201
+State 202
 
-	Stmt1 -> 'if' '(' Expr ')' '{' . Instr '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' Expr ')' '{' . Instr '}'          (rule 69)
+	Stmt1 -> 'if' '(' Expr ')' '{' . Instr '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' Expr ')' '{' . Instr '}'          (rule 76)
+
+	'Array'        shift, and enter state 42
+	'Bool'         shift, and enter state 15
+	'BoolFunc'     shift, and enter state 12
+	'Dict'         shift, and enter state 43
+	'Int'          shift, and enter state 16
+	'IntFunc'      shift, and enter state 13
+	'break'        shift, and enter state 47
+	'continue'     shift, and enter state 48
+	'debug'        shift, and enter state 61
+	'for'          shift, and enter state 49
+	'if'           shift, and enter state 50
+	'print'        shift, and enter state 51
+	'return'       shift, and enter state 52
+	'skip'         shift, and enter state 53
+	'swap'         shift, and enter state 62
+	'while'        shift, and enter state 54
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 44
+	SType          goto state 38
+	FType          goto state 39
+	Instr          goto state 207
+	Instr1         goto state 57
+	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
+	Stmt1          goto state 45
+	Stmt           goto state 60
+
+State 203
+
+	Stmt1 -> 'while' '(' Expr ')' '{' . Instr '}'       (rule 77)
 
 	'Array'        shift, and enter state 42
 	'Bool'         shift, and enter state 15
@@ -3348,77 +3399,63 @@ State 201
 	FType          goto state 39
 	Instr          goto state 206
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 202
-
-	Stmt1 -> 'while' '(' Expr ')' '{' . Instr '}'       (rule 70)
-
-	'Array'        shift, and enter state 42
-	'Bool'         shift, and enter state 15
-	'BoolFunc'     shift, and enter state 12
-	'Dict'         shift, and enter state 43
-	'Int'          shift, and enter state 16
-	'IntFunc'      shift, and enter state 13
-	'break'        shift, and enter state 47
-	'continue'     shift, and enter state 48
-	'debug'        shift, and enter state 61
-	'for'          shift, and enter state 49
-	'if'           shift, and enter state 50
-	'print'        shift, and enter state 51
-	'return'       shift, and enter state 52
-	'skip'         shift, and enter state 53
-	'swap'         shift, and enter state 62
-	'while'        shift, and enter state 54
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 44
-	SType          goto state 38
-	FType          goto state 39
-	Instr          goto state 205
-	Instr1         goto state 57
-	Def1           goto state 40
-	Def            goto state 58
-	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 203
-
-	SpecStmt -> 'swap' '(' Ident ',' Ident . ')'        (rule 88)
-
-	')'            shift, and enter state 204
-
+	Stmt           goto state 60
 
 State 204
 
-	SpecStmt -> 'swap' '(' Ident ',' Ident ')' .        (rule 88)
+	SpecStmt -> 'swap' '(' Ident ',' Ident . ')'        (rule 65)
 
-	';'            reduce using rule 88
+	')'            shift, and enter state 205
 
 
 State 205
 
-	Stmt1 -> 'while' '(' Expr ')' '{' Instr . '}'       (rule 70)
+	SpecStmt -> 'swap' '(' Ident ',' Ident ')' .        (rule 65)
 
-	'}'            shift, and enter state 221
+	';'            reduce using rule 65
 
 
 State 206
 
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr . '}' 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr . '}'          (rule 69)
+	Stmt1 -> 'while' '(' Expr ')' '{' Instr . '}'       (rule 77)
 
-	'}'            shift, and enter state 220
+	'}'            shift, and enter state 222
 
 
 State 207
 
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' . Expr ')' '{' Instr '}'    (rule 71)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr . '}' 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr . '}'          (rule 76)
+
+	'}'            shift, and enter state 221
+
+
+State 208
+
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' . Expr ')' '{' Instr '}'    (rule 78)
+
+	'!'            shift, and enter state 26
+	'('            shift, and enter state 27
+	'++'           shift, and enter state 28
+	'--'           shift, and enter state 29
+	'false'        shift, and enter state 30
+	'true'         shift, and enter state 31
+	L_Ident        shift, and enter state 10
+	L_integ        shift, and enter state 33
+
+	Ident          goto state 19
+	Integer        goto state 20
+	Expr2          goto state 21
+	Expr           goto state 220
+	Expr1          goto state 23
+
+State 209
+
+	Stmt1 -> Ident '[' Expr ']' '=' '(' . Expr ')'      (rule 92)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -3435,45 +3472,26 @@ State 207
 	Expr           goto state 219
 	Expr1          goto state 23
 
-State 208
-
-	Stmt1 -> Ident '[' Expr ']' '=' '(' . Expr ')'      (rule 85)
-
-	'!'            shift, and enter state 26
-	'('            shift, and enter state 27
-	'++'           shift, and enter state 28
-	'--'           shift, and enter state 29
-	'false'        shift, and enter state 30
-	'true'         shift, and enter state 31
-	L_Ident        shift, and enter state 10
-	L_integ        shift, and enter state 33
-
-	Ident          goto state 19
-	Integer        goto state 20
-	Expr2          goto state 21
-	Expr           goto state 218
-	Expr1          goto state 23
-
-State 209
-
-	Stmt1 -> Ident 'set' '[' Expr ']' 'to' . '(' Expr ')'    (rule 86)
-
-	'('            shift, and enter state 217
-
-
 State 210
 
-	Def1 -> 'Array' SType Ident '[' Expr ']' . '(' Expr ')'    (rule 64)
-	Def1 -> 'Array' SType Ident '[' Expr ']' .          (rule 65)
+	Stmt1 -> Ident 'set' '[' Expr ']' 'to' . '(' Expr ')'    (rule 93)
 
-	'('            shift, and enter state 216
-	';'            reduce using rule 65
-	%eof           reduce using rule 65
+	'('            shift, and enter state 218
 
 
 State 211
 
-	Def1 -> FType Ident '(' Params ')' '{' . Instr '}'    (rule 63)
+	Def1 -> 'Array' SType Ident '[' Expr ']' . '(' Expr ')'    (rule 72)
+	Def1 -> 'Array' SType Ident '[' Expr ']' .          (rule 73)
+
+	'('            shift, and enter state 217
+	';'            reduce using rule 73
+	%eof           reduce using rule 73
+
+
+State 212
+
+	Def1 -> FType Ident '(' Params ')' '{' . Instr '}'    (rule 71)
 
 	'Array'        shift, and enter state 42
 	'Bool'         shift, and enter state 15
@@ -3496,15 +3514,15 @@ State 211
 	Ident          goto state 44
 	SType          goto state 38
 	FType          goto state 39
-	Instr          goto state 215
+	Instr          goto state 216
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
+	Stmt           goto state 60
 
-State 212
+State 213
 
 	Expr2 -> Ident 'has' 'key' '[' Expr ']' .           (rule 28)
 
@@ -3531,14 +3549,14 @@ State 212
 	%eof           reduce using rule 28
 
 
-State 213
+State 214
 
 	Lambda -> FType 'lambda' '(' Params ')' '->' . '{' Instr '}'    (rule 55)
 
-	'{'            shift, and enter state 214
+	'{'            shift, and enter state 215
 
 
-State 214
+State 215
 
 	Lambda -> FType 'lambda' '(' Params ')' '->' '{' . Instr '}'    (rule 55)
 
@@ -3563,24 +3581,43 @@ State 214
 	Ident          goto state 44
 	SType          goto state 38
 	FType          goto state 39
-	Instr          goto state 228
+	Instr          goto state 229
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 215
-
-	Def1 -> FType Ident '(' Params ')' '{' Instr . '}'    (rule 63)
-
-	'}'            shift, and enter state 227
-
+	Stmt           goto state 60
 
 State 216
 
-	Def1 -> 'Array' SType Ident '[' Expr ']' '(' . Expr ')'    (rule 64)
+	Def1 -> FType Ident '(' Params ')' '{' Instr . '}'    (rule 71)
+
+	'}'            shift, and enter state 228
+
+
+State 217
+
+	Def1 -> 'Array' SType Ident '[' Expr ']' '(' . Expr ')'    (rule 72)
+
+	'!'            shift, and enter state 26
+	'('            shift, and enter state 27
+	'++'           shift, and enter state 28
+	'--'           shift, and enter state 29
+	'false'        shift, and enter state 30
+	'true'         shift, and enter state 31
+	L_Ident        shift, and enter state 10
+	L_integ        shift, and enter state 33
+
+	Ident          goto state 19
+	Integer        goto state 20
+	Expr2          goto state 21
+	Expr           goto state 227
+	Expr1          goto state 23
+
+State 218
+
+	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' . Expr ')'    (rule 93)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -3597,42 +3634,6 @@ State 216
 	Expr           goto state 226
 	Expr1          goto state 23
 
-State 217
-
-	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' . Expr ')'    (rule 86)
-
-	'!'            shift, and enter state 26
-	'('            shift, and enter state 27
-	'++'           shift, and enter state 28
-	'--'           shift, and enter state 29
-	'false'        shift, and enter state 30
-	'true'         shift, and enter state 31
-	L_Ident        shift, and enter state 10
-	L_integ        shift, and enter state 33
-
-	Ident          goto state 19
-	Integer        goto state 20
-	Expr2          goto state 21
-	Expr           goto state 225
-	Expr1          goto state 23
-
-State 218
-
-	Expr -> Expr . '+' Expr1                            (rule 29)
-	Expr -> Expr . '-' Expr1                            (rule 30)
-	Expr -> Expr . 'or' Expr1                           (rule 32)
-	Expr -> Expr . 'and' Expr1                          (rule 33)
-	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr . ')'      (rule 85)
-
-	')'            shift, and enter state 224
-	'+'            shift, and enter state 69
-	'-'            shift, and enter state 70
-	'and'          shift, and enter state 71
-	'or'           shift, and enter state 72
-	'xor'          shift, and enter state 73
-
-
 State 219
 
 	Expr -> Expr . '+' Expr1                            (rule 29)
@@ -3640,9 +3641,9 @@ State 219
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr . ')' '{' Instr '}'    (rule 71)
+	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr . ')'      (rule 92)
 
-	')'            shift, and enter state 223
+	')'            shift, and enter state 225
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -3652,62 +3653,62 @@ State 219
 
 State 220
 
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' . 'else' '{' Instr '}'    (rule 68)
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' .          (rule 69)
-
-	';'            reduce using rule 69
-	'else'         shift, and enter state 222
-	'}'            reduce using rule 69
-	%eof           reduce using rule 69
-
-
-State 221
-
-	Stmt1 -> 'while' '(' Expr ')' '{' Instr '}' .       (rule 70)
-
-	';'            reduce using rule 70
-	'}'            reduce using rule 70
-	%eof           reduce using rule 70
-
-
-State 222
-
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' . '{' Instr '}'    (rule 68)
-
-	'{'            shift, and enter state 233
-
-
-State 223
-
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' . '{' Instr '}'    (rule 71)
-
-	'{'            shift, and enter state 232
-
-
-State 224
-
-	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr ')' .      (rule 85)
-
-	';'            reduce using rule 85
-	'}'            reduce using rule 85
-	%eof           reduce using rule 85
-
-
-State 225
-
 	Expr -> Expr . '+' Expr1                            (rule 29)
 	Expr -> Expr . '-' Expr1                            (rule 30)
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr . ')'    (rule 86)
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr . ')' '{' Instr '}'    (rule 78)
 
-	')'            shift, and enter state 231
+	')'            shift, and enter state 224
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
 	'or'           shift, and enter state 72
 	'xor'          shift, and enter state 73
+
+
+State 221
+
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' . 'else' '{' Instr '}'    (rule 75)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' .          (rule 76)
+
+	';'            reduce using rule 76
+	'else'         shift, and enter state 223
+	'}'            reduce using rule 76
+	%eof           reduce using rule 76
+
+
+State 222
+
+	Stmt1 -> 'while' '(' Expr ')' '{' Instr '}' .       (rule 77)
+
+	';'            reduce using rule 77
+	'}'            reduce using rule 77
+	%eof           reduce using rule 77
+
+
+State 223
+
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' . '{' Instr '}'    (rule 75)
+
+	'{'            shift, and enter state 234
+
+
+State 224
+
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' . '{' Instr '}'    (rule 78)
+
+	'{'            shift, and enter state 233
+
+
+State 225
+
+	Stmt1 -> Ident '[' Expr ']' '=' '(' Expr ')' .      (rule 92)
+
+	';'            reduce using rule 92
+	'}'            reduce using rule 92
+	%eof           reduce using rule 92
 
 
 State 226
@@ -3717,9 +3718,9 @@ State 226
 	Expr -> Expr . 'or' Expr1                           (rule 32)
 	Expr -> Expr . 'and' Expr1                          (rule 33)
 	Expr -> Expr . 'xor' Expr1                          (rule 34)
-	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr . ')'    (rule 64)
+	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr . ')'    (rule 93)
 
-	')'            shift, and enter state 230
+	')'            shift, and enter state 232
 	'+'            shift, and enter state 69
 	'-'            shift, and enter state 70
 	'and'          shift, and enter state 71
@@ -3729,20 +3730,37 @@ State 226
 
 State 227
 
-	Def1 -> FType Ident '(' Params ')' '{' Instr '}' .    (rule 63)
+	Expr -> Expr . '+' Expr1                            (rule 29)
+	Expr -> Expr . '-' Expr1                            (rule 30)
+	Expr -> Expr . 'or' Expr1                           (rule 32)
+	Expr -> Expr . 'and' Expr1                          (rule 33)
+	Expr -> Expr . 'xor' Expr1                          (rule 34)
+	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr . ')'    (rule 72)
 
-	';'            reduce using rule 63
-	%eof           reduce using rule 63
+	')'            shift, and enter state 231
+	'+'            shift, and enter state 69
+	'-'            shift, and enter state 70
+	'and'          shift, and enter state 71
+	'or'           shift, and enter state 72
+	'xor'          shift, and enter state 73
 
 
 State 228
 
-	Lambda -> FType 'lambda' '(' Params ')' '->' '{' Instr . '}'    (rule 55)
+	Def1 -> FType Ident '(' Params ')' '{' Instr '}' .    (rule 71)
 
-	'}'            shift, and enter state 229
+	';'            reduce using rule 71
+	%eof           reduce using rule 71
 
 
 State 229
+
+	Lambda -> FType 'lambda' '(' Params ')' '->' '{' Instr . '}'    (rule 55)
+
+	'}'            shift, and enter state 230
+
+
+State 230
 
 	Lambda -> FType 'lambda' '(' Params ')' '->' '{' Instr '}' .    (rule 55)
 
@@ -3751,26 +3769,59 @@ State 229
 	%eof           reduce using rule 55
 
 
-State 230
-
-	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr ')' .    (rule 64)
-
-	';'            reduce using rule 64
-	%eof           reduce using rule 64
-
-
 State 231
 
-	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr ')' .    (rule 86)
+	Def1 -> 'Array' SType Ident '[' Expr ']' '(' Expr ')' .    (rule 72)
 
-	';'            reduce using rule 86
-	'}'            reduce using rule 86
-	%eof           reduce using rule 86
+	';'            reduce using rule 72
+	%eof           reduce using rule 72
 
 
 State 232
 
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' . Instr '}'    (rule 71)
+	Stmt1 -> Ident 'set' '[' Expr ']' 'to' '(' Expr ')' .    (rule 93)
+
+	';'            reduce using rule 93
+	'}'            reduce using rule 93
+	%eof           reduce using rule 93
+
+
+State 233
+
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' . Instr '}'    (rule 78)
+
+	'Array'        shift, and enter state 42
+	'Bool'         shift, and enter state 15
+	'BoolFunc'     shift, and enter state 12
+	'Dict'         shift, and enter state 43
+	'Int'          shift, and enter state 16
+	'IntFunc'      shift, and enter state 13
+	'break'        shift, and enter state 47
+	'continue'     shift, and enter state 48
+	'debug'        shift, and enter state 61
+	'for'          shift, and enter state 49
+	'if'           shift, and enter state 50
+	'print'        shift, and enter state 51
+	'return'       shift, and enter state 52
+	'skip'         shift, and enter state 53
+	'swap'         shift, and enter state 62
+	'while'        shift, and enter state 54
+	L_Ident        shift, and enter state 10
+
+	Ident          goto state 44
+	SType          goto state 38
+	FType          goto state 39
+	Instr          goto state 236
+	Instr1         goto state 57
+	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
+	Stmt1          goto state 45
+	Stmt           goto state 60
+
+State 234
+
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' . Instr '}'    (rule 75)
 
 	'Array'        shift, and enter state 42
 	'Bool'         shift, and enter state 15
@@ -3795,81 +3846,48 @@ State 232
 	FType          goto state 39
 	Instr          goto state 235
 	Instr1         goto state 57
-	Def1           goto state 40
 	Def            goto state 58
+	SpecStmt       goto state 59
+	Def1           goto state 41
 	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 233
-
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' . Instr '}'    (rule 68)
-
-	'Array'        shift, and enter state 42
-	'Bool'         shift, and enter state 15
-	'BoolFunc'     shift, and enter state 12
-	'Dict'         shift, and enter state 43
-	'Int'          shift, and enter state 16
-	'IntFunc'      shift, and enter state 13
-	'break'        shift, and enter state 47
-	'continue'     shift, and enter state 48
-	'debug'        shift, and enter state 61
-	'for'          shift, and enter state 49
-	'if'           shift, and enter state 50
-	'print'        shift, and enter state 51
-	'return'       shift, and enter state 52
-	'skip'         shift, and enter state 53
-	'swap'         shift, and enter state 62
-	'while'        shift, and enter state 54
-	L_Ident        shift, and enter state 10
-
-	Ident          goto state 44
-	SType          goto state 38
-	FType          goto state 39
-	Instr          goto state 234
-	Instr1         goto state 57
-	Def1           goto state 40
-	Def            goto state 58
-	Stmt1          goto state 45
-	Stmt           goto state 59
-	SpecStmt       goto state 60
-
-State 234
-
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr . '}'    (rule 68)
-
-	'}'            shift, and enter state 237
-
+	Stmt           goto state 60
 
 State 235
 
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr . '}'    (rule 71)
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr . '}'    (rule 75)
 
-	'}'            shift, and enter state 236
+	'}'            shift, and enter state 238
 
 
 State 236
 
-	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}' .    (rule 71)
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr . '}'    (rule 78)
 
-	';'            reduce using rule 71
-	'}'            reduce using rule 71
-	%eof           reduce using rule 71
+	'}'            shift, and enter state 237
 
 
 State 237
 
-	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}' .    (rule 68)
+	Stmt1 -> 'for' '(' Ident '=' Expr 'to' Expr ')' '{' Instr '}' .    (rule 78)
 
-	';'            reduce using rule 68
-	'}'            reduce using rule 68
-	%eof           reduce using rule 68
+	';'            reduce using rule 78
+	'}'            reduce using rule 78
+	%eof           reduce using rule 78
+
+
+State 238
+
+	Stmt1 -> 'if' '(' Expr ')' '{' Instr '}' 'else' '{' Instr '}' .    (rule 75)
+
+	';'            reduce using rule 75
+	'}'            reduce using rule 75
+	%eof           reduce using rule 75
 
 
 -----------------------------------------------------------------------------
 Grammar Totals
 -----------------------------------------------------------------------------
-Number of rules: 93
+Number of rules: 95
 Number of terminals: 66
 Number of non-terminals: 26
-Number of states: 238
+Number of states: 239

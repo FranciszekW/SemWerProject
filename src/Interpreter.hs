@@ -1,5 +1,6 @@
 -- TODOS:
--- 4. Add static type checking.
+-- 1. Monadic lambda implementation.
+-- 2. Static type checking.
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -72,7 +73,7 @@ data ComplexValue = VArray Arr | VDict Dict deriving (Show)
 -- Array of simple values (not used in functions directly)
 type Arr = [SimpleValue]
 
--- Dictionary mapping strings to simple values (not used in functions directly)
+-- Dictionary mapping keys to simple values (not used in functions directly)
 -- We only have integers as keys in our language, since we don't have strings
 -- and booleans don't make much sense as keys.
 type DictKey = Integer
@@ -743,7 +744,7 @@ iMD (FuncDef ftype (Ident func) params instr) = do
     return (rhoV, rhoF')
 
 
---reszta todo
+--reszta todo (funkcje jako argumenty)
 
 msetarguments :: [FuncParam] -> [FuncArg] -> WorkingMonad (VEnv, FMEnv)
 msetarguments [] [] = do

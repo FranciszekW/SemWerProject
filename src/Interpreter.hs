@@ -1,8 +1,8 @@
 -- TODOS:
 -- > Static type checking (checking execution mode in every evaluation function).
 -- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
--- > Check some strange swapping behaviour (test.txt).
--- > Fix grammar to allow definition or special statements to be the last instruction in a sequence.
+-- > Let negative numbers parse...
+-- > Fix break and continue (see test.txt).
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -628,39 +628,34 @@ evalSimpleValBinOp op exp0 exp1 rhoV rhoF sto = do
     return (sto'', VBool (x `op` y))
 
 ------------------------------------------ INSTRUCTIONS (monadic) -------------------------------------------
-iMI :: Instr -> WorkingMonad (Maybe SimpleValue)
+iMI :: Instr -> WorkingMonad (Maybe SimpleValue, VEnv, FMEnv)
 
+-- Version with new return type
 iMI (ISeq instr0 instr1) = do
-    res <- iMI instr0
-    case res of
-        Just val -> return (Just val)
+    (res0, rhoV0, rhoF0) <- iMI instr0
+    case res0 of
+        Just val -> return (Just val, rhoV0, rhoF0)
         Nothing -> do
             (breakCount, continueFlag) <- getControlFlow
-            if breakCount > 0 || continueFlag then
-                return Nothing
+            if  (breakCount > 0 || continueFlag) then
+                return (Nothing, rhoV0, rhoF0)
             else do
-                iMI instr1
+                local (const (rhoV0, rhoF0)) (iMI instr1)
 
-iMI (IDSeq def instr) = do
-    (rhoV', rhoF') <- iMD def
-    
-    res <- local (const (rhoV', rhoF')) $ do
-        iMI instr
-    case res of
-        Just val -> return (Just val)
-        Nothing -> return Nothing
-
-iMI (ISSeq specStmt instr) = do
-    (rhoV', rhoF') <- iMSpecS specStmt
-
-    res <- local (const (rhoV', rhoF')) $ do
-        iMI instr
-    case res of
-        Just val -> return (Just val)
-        Nothing -> return Nothing
+iMI (IDef def) = do
+    (rhoV, rhoF) <- iMD def
+    return (Nothing, rhoV, rhoF) -- definitions don't return anything
 
 iMI (IStmt stmt) = do
-    iMS stmt
+    (rhoV, rhoF) <- ask
+    res <- iMS stmt
+    case res of
+        Just val -> return (Just val, rhoV, rhoF)
+        Nothing -> return (Nothing, rhoV, rhoF)
+
+iMI (ISpecStmt specStmt) = do
+    (rhoV, rhoF) <- iMSpecS specStmt
+    return (Nothing, rhoV, rhoF)
 
 ------------------------------------------ INSTRUCTIONS -------------------------------------------
 -- Instructions include definitions and statements, so they can modify everything.
@@ -767,7 +762,7 @@ iMD (FuncDef ftype (Ident func) params instr) = do
             let paramList = eP params
             (rhoV, rhoF) <- msetarguments (paramList) args
             let rhoF' = mapSet rhoF func x
-            res <- local (const (rhoV, rhoF')) (iMI instr)
+            (res, _, _) <- local (const (rhoV, rhoF')) (iMI instr)
             case res of
                 Just val -> return (val)
                 Nothing -> return (VInt 0)
@@ -901,7 +896,7 @@ eML (Lam ftype params instr) = do
         x = \args -> do 
             let paramList = eP params
             (rhoV, rhoF) <- msetarguments (paramList) args
-            res <- local (const (rhoV, rhoF)) (iMI instr)
+            (res, _, _) <- local (const (rhoV, rhoF)) (iMI instr)
             case res of
                 Just val -> return (val)
                 Nothing -> return (VInt 0)
@@ -1067,14 +1062,18 @@ iMS (SContinue0) = do
 
 iMS (SIf expr i0 i1) = do
     (VBool b) <- eMe expr
-    if b then iMI i0
-    else iMI i1
+    if b then do
+        (res1, _, _) <- iMI i0
+        return res1
+    else do
+        (res2, _, _) <- iMI i1
+        return res2
 
 iMS (SWhile expr i) = do
     let x = do
         (VBool b) <- eMe expr
         if b then do
-            res <- iMI i
+            (res, rhoV, rhoF) <- iMI i -- instructions in while loop can modify the environment
             case res of
                 Just val -> return (Just val)
                 Nothing -> do
@@ -1082,7 +1081,7 @@ iMS (SWhile expr i) = do
                     if breakCount > 0 || continueFlag then
                         return Nothing
                     else
-                        x
+                        local (const (rhoV, rhoF)) x
         else
             return Nothing
     x
@@ -1095,7 +1094,7 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
         let x = do
             (VInt val) <- eMe (VarVal (Ident var))
             if val <= to then do
-                res <- iMI instr
+                (res, rhoV, rhoF) <- iMI instr
                 case res of
                     Just val -> return (Just val)
                     Nothing -> do
@@ -1104,7 +1103,7 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
                             return Nothing
                         else do
                             msetVarVal var (SimpleVal (VInt (val + 1)))
-                            x
+                            local (const (rhoV, rhoF)) x
             else
                 return Nothing
         x
@@ -1204,8 +1203,6 @@ SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
 SContinue0. Stmt1 ::= "continue";
 -}
 
--- Monadic versions:
-
 -- Statements should not get StoreAndValue as a argument, because the return statement
 -- should quit the function immediately.
 iS (SBreak exp0) rhoV rhoF sto = do
@@ -1252,7 +1249,6 @@ iS (SIf expr i0 i1) rhoV rhoF sto = do
                     Left err -> Left err
                     Right (_, _, res) -> return res
 
--- Monadic version of while
 iS (SWhile expr i) rhoV rhoF sto = x rhoV rhoF sto where
     x rv rf st = do
         let exprRes = eE expr rv rf st
@@ -1276,7 +1272,6 @@ iS (SWhile expr i) rhoV rhoF sto = x rhoV rhoF sto where
                 else
                     return (StoreOnly st', (0, False))
 
--- Monadic version of for
 iS (SFor (Ident var) exprFrom exprTo instr) rhoV rhoF sto = do
     let fromExprRes = eE exprFrom rhoV rhoF sto
     case fromExprRes of

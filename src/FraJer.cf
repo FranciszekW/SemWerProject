@@ -111,16 +111,12 @@ Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 -- BNFC expressions for instructions (statements and definitions)
 -- I1; I2
 ISeq.       Instr ::= Instr1 ";" Instr; -- right associative, execution RtoL
-IDSeq.      Instr ::= Def ";" Instr; -- introducing definition
---IDef.       Instr1 ::= Def; --TODO FIX: currently we cannot parse definitions as last instruction in a block
+IDef.       Instr1 ::= Def;
 IStmt.      Instr1 ::= Stmt;
---ISpecStmt.  Instr1 ::= SpecStmt; --As above needs fix
-ISSeq.      Instr ::= SpecStmt ";" Instr;
+ISpecStmt.  Instr1 ::= SpecStmt;
 
 _. Instr ::= Instr1;
 _. Instr1 ::= Instr1 ";";
-_. Def ::= Def ";";
-_. SpecStmt ::= SpecStmt ";";
 
 -- Grammar for defining variables and functions
 -- vardef ::= type Ident = Expr | Array type Ident "[" Ie "]" (Ie) | Array type Ident "[" e "]" | Dict type Ident

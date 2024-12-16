@@ -44,6 +44,7 @@ EDiv.    Expr1 ::= Expr1 "/" Expr2;
 EMul.    Expr1 ::= Expr1 "*" Expr2;
 EMod.    Expr1 ::= Expr1 "%" Expr2;
 ENum.    Expr2 ::= Integer;
+ENeg.    Expr3 ::= "-" Expr2;
 
 EPostInc. Expr2 ::= Ident "++";
 EPreInc.  Expr2 ::= "++" Ident;
@@ -53,9 +54,10 @@ EPreDec.  Expr2 ::= "--" Ident;
 EArray.  Expr2 ::= Ident "[" Expr "]";
 EDict.   Expr2 ::= Ident "get" "[" Expr "]";
 
-_.       Expr2 ::= "(" Expr ")"; -- We silently introduce parentheses
-_.       Expr1  ::= Expr2;       -- We silently make Expr1 and Expr2 equal
-_.       Expr ::= Expr1;         -- We silently make Expr and Expr1 equal
+_.       Expr3 ::= "(" Expr ")"; -- We silently introduce parentheses
+_.       Expr2 ::= Expr3;         -- We silently make Expr2 and Expr3 equal
+_.       Expr1 ::= Expr2;       -- We silently make Expr1 and Expr2 equal
+_.       Expr  ::= Expr1;         -- We silently make Expr and Expr1 equal
 
 -- --------------------------------------------------------------------------------------------- --
 

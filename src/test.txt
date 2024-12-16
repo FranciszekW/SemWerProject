@@ -3,14 +3,23 @@ while (i < 10) {
     print(i);
     Int j = i + 1;
     swap(i, j);
-    skip;
 };
+print(i);
 //
+for (i = 0 to 9) {
+    print(i * 10);
+    for (j = 1 to 9) {
+        if (i == 5 and j == 5) {
+            continue outer(1);
+        };
+        print(j);
+    }
+};
 IntFunc f(IntFunc g, IntFunc h, Int z) {
-    return (g(h(z)))
+    return (g(h(z)));
 };
 Int y = f(IntFunc lambda(Int x) -> { return (x * x) }, IntFunc lambda(Int x) -> { return (x + 1) }, 5);
-print(y)
+print(y);
 
 IntFunc fibonacci(Int n) {
     if (n <= 1) {
@@ -21,27 +30,16 @@ IntFunc fibonacci(Int n) {
 };
 Int n = 20;
 Int result = fibonacci(n);
-print(result)
+print(result);
 
 IntFunc silnia(Int n) {
     if (n <= 1) {
-        return (1)
+        return (1);
     } else {
-        return (n * silnia(n-1))
+        return (n * silnia(n-1));
     }
 };
-print(silnia(30))
-
-for (i = 0 to 9) {
-    print(i * 10);
-    for (j = 1 to 9) {
-        if (i == 5 and j == 5) {
-            continue
-        };
-        print(j)
-    }
-}
-
+print(silnia(30));
 /* Funkcja obliczająca i wypisująca drogę liczby w problemie 3n + 1 */
 IntFunc collatz(Int n) {
     print(n); /* Wypisz początkową liczbę */
@@ -58,7 +56,7 @@ IntFunc collatz(Int n) {
 };
 
 Int c = collatz(7);
-print(x)
+print(x);
 
 /* Funkcja Sito Eratostenesa */
 IntFunc sieve(Int n) {
@@ -89,4 +87,4 @@ IntFunc sieve(Int n) {
 };
 
 Int x = sieve(50);
-print (x)
+print (x);

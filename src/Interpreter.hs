@@ -1,8 +1,6 @@
 -- TODOS:
 -- > Static type checking (checking execution mode in every evaluation function).
 -- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
--- > Let negative numbers parse...
--- > Fix break and continue (see test.txt).
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -346,6 +344,10 @@ eMe (EMod exp0 exp1) = do
     if y == 0 then throwError ModByZero
     else return (VInt (x `mod` y))
 
+eMe (ENeg exp0) = do
+    (VInt x) <- eMe exp0
+    return (VInt (-x))
+
 eMe (EArray (Ident arr) exp0) = do
     (VInt i) <- eMe exp0
     a <- mgetarray (Ident arr)
@@ -509,6 +511,10 @@ eE (EMod exp0 exp1) rhoV rhoF sto = do
     (sto'', VInt y) <- eE exp1 rhoV rhoF sto'
     if y == 0 then Left DivByZero
     else return (sto'', VInt (x `mod` y))
+
+eE (ENeg exp0) rhoV rhoF sto = do
+    (sto', VInt x) <- eE exp0 rhoV rhoF sto
+    return (sto', VInt (-x))
 
 eE (EArray (Ident arr) exp0) rhoV rhoF sto = do
         let ComplexVal (VArray a) = getVarVal rhoV sto arr

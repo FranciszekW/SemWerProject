@@ -230,6 +230,15 @@ msetVarVal var val = do
     sto <- getStore
     putStore (setVarVal rhoV sto var val)
 
+-- Here we throw an error if the variable is not defined.
+mgetVarVal :: Var -> WorkingMonad Value
+mgetVarVal var = do
+    (rhoV, _) <- ask
+    sto <- getStore
+    case Data.Map.lookup var rhoV of
+        Just (loc, _) -> return (getVarVal rhoV sto var)
+        Nothing -> throwError (VariableNotDefined (Ident var))
+        
 -- not monadic:
 
 unsafePrint s = unsafePerformIO (putStrLn s) `seq` ()
@@ -294,14 +303,21 @@ eMe (FuncVal (Ident func) args) = do
     res <- f arguments
     return res
 
+-- monadic semantics of VarVal using mgetVarVal
 eMe (VarVal (Ident var)) = do
-    (rhoV, _) <- ask
-    sto <- getStore
-    case Data.Map.lookup var rhoV of
-        Just (loc, _) -> case (mapGet (currMap sto) loc) of 
-            SimpleVal val -> return val
-            ComplexVal val -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
-        Nothing -> throwError (VariableNotDefined (Ident var))
+    val <- mgetVarVal var
+    case val of
+        SimpleVal x -> return x
+        ComplexVal _ -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
+        
+--eMe (VarVal (Ident var)) = do
+--    (rhoV, _) <- ask
+--    sto <- getStore
+--    case Data.Map.lookup var rhoV of
+--        Just (loc, _) -> case (mapGet (currMap sto) loc) of 
+--            SimpleVal val -> return val
+--            ComplexVal val -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
+--        Nothing -> throwError (VariableNotDefined (Ident var))
 
 eMe (EPlus exp0 exp1) = do
     (VInt x) <- eMe exp0

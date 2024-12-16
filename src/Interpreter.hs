@@ -1,6 +1,8 @@
 -- TODOS:
 -- > Static type checking (checking execution mode in every evaluation function).
 -- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
+-- Another option is to create separate file for this and copy-paste almost everything
+-- but with types.
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -221,12 +223,32 @@ putControlFlow :: ControlFlow -> WorkingMonad ()
 putControlFlow controlFlow = do
     (sto, _) <- get
     put (sto, controlFlow)
+-- in set VarVal we print the value if the write flag is set
 
+-- Similar to getVarVal, but we need to check the write flag and if its set, print the value.
+-- At the end we return the new store.
+setVarVal:: VEnv -> Store -> Var -> Value -> Store
+setVarVal rhoV sto var val =
+    let (loc, (_, writeFlag)) = mapGet rhoV var in
+    let map = mapSet (currMap sto) loc val in
+        if writeFlag then
+            unsafePrint ("Writing: " ++ show var ++ " = " ++ show val) `seq` CStore map (nextLoc sto)
+        else
+            CStore map (nextLoc sto)
+
+-- If the variable is not defined, we throw an error.
 msetVarVal :: Var -> Value -> WorkingMonad ()
 msetVarVal var val = do
     (rhoV, _) <- ask
     sto <- getStore
-    putStore (setVarVal rhoV sto var val)
+    case Data.Map.lookup var rhoV of
+        Just (loc, (_, writeFlag)) -> do
+            if writeFlag then do
+                 liftIO $ putStrLn ("Writing: " ++ show var ++ " = " ++ show val)
+                 putStore (CStore (mapSet (currMap sto) loc val) (nextLoc sto))
+            else do
+                 putStore (CStore (mapSet (currMap sto) loc val) (nextLoc sto))
+        Nothing -> throwError (VariableNotDefined (Ident var))
 
 -- Here we throw an error if the variable is not defined.
 mgetVarVal :: Var -> WorkingMonad Value
@@ -234,9 +256,15 @@ mgetVarVal var = do
     (rhoV, _) <- ask
     sto <- getStore
     case Data.Map.lookup var rhoV of
-        Just (loc, _) -> return (getVarVal rhoV sto var)
+        Just (loc, (readFlag, _)) -> do
+            let val = mapGet (currMap sto) loc
+            if readFlag then do
+                liftIO $ putStrLn ("Reading: " ++ show var ++ " = " ++ show val)
+                return val
+            else do
+                return val
         Nothing -> throwError (VariableNotDefined (Ident var))
-        
+
 -- not monadic:
 
 unsafePrint s = unsafePerformIO (putStrLn s) `seq` ()
@@ -265,24 +293,6 @@ getVarVal rhoV sto var =
 --  let loc = mapGet rhoV var in
 --    mapGet (currMap sto) loc
 
--- in set VarVal we print the value if the write flag is set
-
--- Similar to getVarVal, but we need to check the write flag and if its set, print the value.
--- At the end we return the new store.
-setVarVal:: VEnv -> Store -> Var -> Value -> Store
-setVarVal rhoV sto var val =
-    let (loc, (_, writeFlag)) = mapGet rhoV var in
-    let map = mapSet (currMap sto) loc val in
-        if writeFlag then
-            unsafePrint ("Writing: " ++ show var ++ " = " ++ show val) `seq` CStore map (nextLoc sto)
-        else
-            CStore map (nextLoc sto)
---
---setVarVal:: VEnv -> Store -> Var -> Value -> Store
---setVarVal rhoV sto var val =
---  let loc = mapGet rhoV var in
---  let map = mapSet (currMap sto) loc val in
---    CStore map (nextLoc sto)
 
 replaceNth :: [a] -> Int -> a -> [a]
 replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) xs

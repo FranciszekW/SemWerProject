@@ -1053,7 +1053,7 @@ iMS (SContinue exp0) = do
     (VInt n) <- eMe exp0
     if n < 0 then throwError (InvalidContinueArgument n)
     else do
-        putControlFlow (0, True)
+        putControlFlow (n, True)
         return Nothing
 
 iMS (SContinue0) = do
@@ -1075,14 +1075,21 @@ iMS (SWhile expr i) = do
         if b then do
             (res, rhoV, rhoF) <- iMI i -- instructions in while loop can modify the environment
             case res of
-                Just val -> return (Just val)
+                Just val -> do
+                    putControlFlow (0, False) -- reset the flags
+                    return (Just val)
                 Nothing -> do
                     (breakCount, continueFlag) <- getControlFlow
-                    if breakCount > 0 || continueFlag then
+                    if breakCount > 0 then do
+                        putControlFlow (breakCount - 1, continueFlag)
                         return Nothing
+                    else if continueFlag then do
+                        putControlFlow (0, False) -- reset the flags
+                        local (const (rhoV, rhoF)) x
                     else
                         local (const (rhoV, rhoF)) x
-        else
+        else do
+            putControlFlow (0, False) -- reset the flags
             return Nothing
     x
 
@@ -1096,15 +1103,23 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
             if val <= to then do
                 (res, rhoV, rhoF) <- iMI instr
                 case res of
-                    Just val -> return (Just val)
+                    Just val -> do
+                        putControlFlow (0, False) -- reset the flags
+                        return (Just val)
                     Nothing -> do
                         (breakCount, continueFlag) <- getControlFlow
-                        if breakCount > 0 || continueFlag then
+                        if breakCount > 0 then do
+                            putControlFlow (breakCount - 1, continueFlag)
                             return Nothing
+                        else if continueFlag then do
+                            putControlFlow (0, False) -- reset the flags
+                            msetVarVal var (SimpleVal (VInt (val + 1)))
+                            local (const (rhoV, rhoF)) x
                         else do
                             msetVarVal var (SimpleVal (VInt (val + 1)))
                             local (const (rhoV, rhoF)) x
-            else
+            else do
+                putControlFlow (0, False) -- reset the flags
                 return Nothing
         x
 

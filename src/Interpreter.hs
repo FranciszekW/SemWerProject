@@ -1,9 +1,8 @@
 -- TODOS:
--- 1. Monadic lambda implementation.
--- 2. Static type checking (checking execution mode in every evaluation function).
+-- > Static type checking (checking execution mode in every evaluation function).
 -- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
--- 3. Check some strange swapping behaviour (test.txt).
--- 4. Fix grammar to allow definition or special statements to be the last instruction in a sequence.
+-- > Check some strange swapping behaviour (test.txt).
+-- > Fix grammar to allow definition or special statements to be the last instruction in a sequence.
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -86,7 +85,7 @@ type Dict = Map DictKey SimpleValue
 data Value = SimpleVal SimpleValue | ComplexVal ComplexValue deriving (Show)
 
 -- Function arguments can be either simple values (Int, Bool) or functions themselves
-data FuncArg = SimpleArg SimpleValue | FArg Func
+data FuncArg = SimpleArg SimpleValue | FArg MFunc
 
 -- Function takes a list of function arguments and a store, returns a new store and a simple value)
 type Func = [FuncArg] -> Store -> MyExprMonad
@@ -776,6 +775,11 @@ msetarguments (PSimple stype (Ident var) : restParams) (SimpleArg val : restArgs
     local (const (rhoV', rhoF)) $ do
         msetarguments restParams restArgs
 
+msetarguments (PFunc ftype (Ident func) : restParams) (FArg f : restArgs) = do
+    (rhoV, rhoF) <- ask
+    let rhoF' = mapSet rhoF func f
+    local (const (rhoV, rhoF')) $ do
+        msetarguments restParams restArgs
 
 -------------------------------VARIABLE DEFINITIONS------------------------------------------------
 -- Definitions also can modify everything.
@@ -863,7 +867,29 @@ eMa (ArgsMany expr args) = do
     val <- eMe expr
     vals <- eMa args
     return (SimpleArg val : vals)
--- eML :: Lambda -> WorkingMonad Func TODO
+eMa (ArgsLambda lambda) = do
+    f <- eML lambda
+    return [FArg f]
+eMa (ArgsLambdaMany lambda args) = do
+    f <- eML lambda
+    fs <- eMa args
+    return (FArg f : fs)
+
+
+
+eML :: Lambda -> WorkingMonad MFunc
+
+eML (Lam ftype params instr) = do
+    (rhoV, rhoF) <- ask
+    let x :: [FuncArg] -> WorkingMonad(SimpleValue) 
+        x = \args -> do 
+            let paramList = eP params
+            (rhoV, rhoF) <- msetarguments (paramList) args
+            res <- local (const (rhoV, rhoF)) (iMI instr)
+            case res of
+                Just val -> return (val)
+                Nothing -> return (VInt 0)
+    return x
 
 eMP :: Params -> WorkingMonad [FuncParam]
 
@@ -908,14 +934,14 @@ eA (ArgsMany expr args) rhoV rhoF sto = do
                 Left err -> Left err
                 Right (sto'', args') -> return (sto'', (SimpleArg val) : args')
 
-eA (ArgsLambda lambda) rhoV rhoF sto = Right (sto, [FArg (eL lambda rhoV rhoF sto)])
+-- eA (ArgsLambda lambda) rhoV rhoF sto = Right (sto, [FArg (eL lambda rhoV rhoF sto)])
 
-eA (ArgsLambdaMany lambda args) rhoV rhoF sto = do
-    let argsRes = eA args rhoV rhoF sto
-    case argsRes of
-        Left err -> Left err
-        Right (sto', args') -> do
-            return (sto', (FArg (eL lambda rhoV rhoF sto)) : args')
+-- eA (ArgsLambdaMany lambda args) rhoV rhoF sto = do
+--     let argsRes = eA args rhoV rhoF sto
+--     case argsRes of
+--         Left err -> Left err
+--         Right (sto', args') -> do
+--             return (sto', (FArg (eL lambda rhoV rhoF sto)) : args')
 
 -- Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
 -- Important! Lambda definition itself can not return an error.
@@ -991,9 +1017,9 @@ assignArgs ((PSimple stype (Ident var)):params) ((SimpleArg val):args) rhoV rhoF
         assignArgs params args rhoV rhoF sto'
 
 -- We need to override the dummy function which we assigned before with the actual function in the argument.
-assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
-    let rhoF' = mapSet rhoF func f in
-        assignArgs params args rhoV rhoF' sto
+-- assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
+--     let rhoF' = mapSet rhoF func f in
+--         assignArgs params args rhoV rhoF' sto
 
 ------------------------------------------ STATEMENTS (monadic) ---------------------------------------------
 

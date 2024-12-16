@@ -90,5 +90,8 @@ IntFunc petla(Int n) {
     return (0);
 };
 
+IntFunc zlozenie(IntFunc x, BoolFunc y, Int n) {
+    return (y(x(x(n))));
+};
 
-print(petla(10));
+print(zlozenie(IntFunc lambda (Int x) -> {return (x*x)}, BoolFunc lambda (Int x) -> {return (x == 10000)}, 10));

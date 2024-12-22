@@ -87,8 +87,6 @@ data Value = SimpleVal SimpleValue | ComplexVal ComplexValue deriving (Show)
 -- Function arguments can be either simple values (Int, Bool) or functions themselves
 data FuncArg = SimpleArg SimpleValue | FArg MFunc
 
--- Function takes a list of function arguments and a store, returns a new store and a simple value)
-type Func = [FuncArg] -> Store -> MyExprMonad
 
 data Error =  DivByZero
             | ModByZero
@@ -129,7 +127,6 @@ type ControlFlow = (BreakCount, ContinueFlag)
 type DebugFlags = (DebugFlag, DebugFlag)
 
 type VEnv = Map Var (Loc, DebugFlags)
-type FEnv = Map Var Func
 
 data Store = CStore {currMap :: Map Loc Value, nextLoc :: Loc} deriving Show
 
@@ -141,7 +138,6 @@ data TypeStore = TStore {typeMap :: Map Var Type, nextTypeLoc :: Loc} deriving S
 
 ------------------------------------------ MONADS -------------------------------------------------
 
-type MyExprMonad = Either Error (Store, SimpleValue)
 type MFunc = [FuncArg] -> WorkingMonad (SimpleValue)
 type FMEnv = Map Var MFunc
 type Env = (VEnv, FMEnv, ExecutionMode)
@@ -297,9 +293,7 @@ getVarVal rhoV sto var =
 replaceNth :: [a] -> Int -> a -> [a]
 replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) xs
 
------------------------------------------- SEMANTICS ----------------------------------------------
-
------------------------------------------EXPRESSIONS (monadic) ----------------------------------------------
+----------------------------------------- EXPRESSIONS ------------------------------------------
 
 eMe :: Expr -> WorkingMonad SimpleValue
 
@@ -468,182 +462,7 @@ mgetdict (Ident dict) = do
             return d
         Nothing -> throwError (VariableNotDefined (Ident dict))
 
-
------------------------------------------EXPRESSIONS ----------------------------------------------
-
--- Expressions can modify store too, because functions can be called.
-eE :: Expr -> VEnv -> FEnv -> Store -> MyExprMonad
-
-{-
-FuncVal.   Expr2 ::= Ident "(" Args ")";
-VarVal.    Expr2 ::= Ident;
--}
-
-eE (ENum n) rhoV rhoF sto = Right (sto, VInt n)
-
-eE (FuncVal (Ident func) args) rhoV rhoF sto = do
-    let f = mapGet rhoF func
-    let argsRes = eA args rhoV rhoF sto
-    case argsRes of
-        Left err -> Left err
-        Right (sto', args') -> f args' sto'
-
-eE (VarVal (Ident var)) rhoV rhoF sto = Right (sto, x) where
-  SimpleVal x = getVarVal rhoV sto var
-
-{-
-EPlus.   Expr  ::= Expr "+" Expr1;
-EMinus.  Expr  ::= Expr "-" Expr1;
-EDiv.    Expr1 ::= Expr1 "/" Expr2;
-EMul.    Expr1 ::= Expr1 "*" Expr2;
-EMod.    Expr1 ::= Expr1 "%" Expr2;
-ENum.    Expr2 ::= Integer;
-
-EArray.  Expr2 ::= Ident "[" Expr "]";
-EDict.   Expr2 ::= Ident "get" "[" Expr "]";
--}
-
-
-eE (EPlus exp0 exp1) rhoV rhoF sto = evalBinaryOp (+) exp0 exp1 rhoV rhoF sto
-
-eE (EMinus exp0 exp1) rhoV rhoF sto = evalBinaryOp (-) exp0 exp1 rhoV rhoF sto
-
-eE (EDiv exp0 exp1) rhoV rhoF sto = do
-    (sto', VInt x) <- eE exp0 rhoV rhoF sto
-    (sto'', VInt y) <- eE exp1 rhoV rhoF sto'
-    if y == 0 then Left DivByZero
-    else return (sto'', VInt (x `div` y))
-
-eE (EMul exp0 exp1) rhoV rhoF sto = evalBinaryOp (*) exp0 exp1 rhoV rhoF sto
-
-eE (EMod exp0 exp1) rhoV rhoF sto = do
-    (sto', VInt x) <- eE exp0 rhoV rhoF sto
-    (sto'', VInt y) <- eE exp1 rhoV rhoF sto'
-    if y == 0 then Left DivByZero
-    else return (sto'', VInt (x `mod` y))
-
-eE (ENeg exp0) rhoV rhoF sto = do
-    (sto', VInt x) <- eE exp0 rhoV rhoF sto
-    return (sto', VInt (-x))
-
-eE (EArray (Ident arr) exp0) rhoV rhoF sto = do
-        let ComplexVal (VArray a) = getVarVal rhoV sto arr
-        (sto', VInt i) <- eE exp0 rhoV rhoF sto
-
-        if i < 0 || i >= toInteger (length a) then Left (IndexOutOfBounds i)
-        else return (sto', a !! fromInteger i)
-
-eE (EDict (Ident dict) exp0) rhoV rhoF sto = do
-        let ComplexVal (VDict d) = getVarVal rhoV sto dict
-        (sto', VInt i) <- eE exp0 rhoV rhoF sto
-
-        if not (mapHasKey d i) then Left (KeyNotInDict i)
-        else return (sto', d ! i)
-
-
--- Expressions with side effects.
-{-
-EPostInc. Expr2 ::= Ident "++";
-EPreInc.  Expr2 ::= "++" Ident;
-EPostDec. Expr2 ::= Ident "--";
-EPreDec.  Expr2 ::= "--" Ident;
--}
-
-eE (EPostInc (Ident var)) rhoV rhoF sto =
-    let SimpleVal (VInt x) = getVarVal rhoV sto var in
-    let sto' = setVarVal rhoV sto var (SimpleVal (VInt (x + 1))) in
-        Right (sto', VInt x)
-
-eE (EPreInc (Ident var)) rhoV rhoF sto =
-    let SimpleVal (VInt x) = getVarVal rhoV sto var in
-    let sto' = setVarVal rhoV sto var (SimpleVal (VInt (x + 1))) in
-        Right (sto', VInt (x + 1))
-
-eE (EPostDec (Ident var)) rhoV rhoF sto =
-    let SimpleVal (VInt x) = getVarVal rhoV sto var in
-    let sto' = setVarVal rhoV sto var (SimpleVal (VInt (x - 1))) in
-        Right (sto', VInt x)
-
-eE (EPreDec (Ident var)) rhoV rhoF sto =
-    let SimpleVal (VInt x) = getVarVal rhoV sto var in
-    let sto' = setVarVal rhoV sto var (SimpleVal (VInt (x - 1))) in
-        Right (sto', VInt (x - 1))
-
-
--- Semantics of boolean expressions
-{-
-BTrue.  Expr2 ::= "true";
-BFalse. Expr2 ::= "false";
-EEq.    Expr1 ::= Expr1 "==" Expr2;
-ENeq.   Expr1 ::= Expr1 "!=" Expr2;
-ELt.    Expr1 ::= Expr1 "<" Expr2;
-EGt.    Expr1 ::= Expr1 ">" Expr2;
-ELeq.   Expr1 ::= Expr1 "<=" Expr2;
-EGeq.   Expr1 ::= Expr1 ">=" Expr2;
-
-BNot.   Expr2 ::= "!" Expr2;
--- && and || have the same priority (according to prof. Urzyczyn), but lower than comparison operators
-BOr.    Expr ::= Expr "or" Expr1;
-BAnd.   Expr ::= Expr "and" Expr1;
-BXor.   Expr ::= Expr "xor" Expr1;
-
-BDictHasKey.  Expr2 ::= Ident "has" "key" "[" Expr "]";
--}
-
-eE (BTrue) rhoV rhoF sto = Right (sto, VBool True)
-eE (BFalse) rhoV rhoF sto = Right (sto, VBool False)
-
--- Works for both integers and booleans
-eE (EEq exp0 exp1) rhoV rhoF sto = evalSimpleValBinOp (==) exp0 exp1 rhoV rhoF sto
-eE (ENeq exp0 exp1) rhoV rhoF sto = evalSimpleValBinOp (/=) exp0 exp1 rhoV rhoF sto
-
--- These work only for integers
-eE (ELt exp0 exp1) rhoV rhoF sto = evalIntBinOp (<) exp0 exp1 rhoV rhoF sto
-eE (EGt exp0 exp1) rhoV rhoF sto = evalIntBinOp (>) exp0 exp1 rhoV rhoF sto
-eE (ELeq exp0 exp1) rhoV rhoF sto = evalIntBinOp (<=) exp0 exp1 rhoV rhoF sto
-eE (EGeq exp0 exp1) rhoV rhoF sto = evalIntBinOp (>=) exp0 exp1 rhoV rhoF sto
-
--- Now specific to booleans
--- Not is a little special :)
-eE (BNot exp0) rhoV rhoF sto = do
-    (sto', VBool x) <- eE exp0 rhoV rhoF sto
-    return (sto', VBool (not x))
-
-eE (BOr exp0 exp1) rhoV rhoF sto = evalBoolBinOp (||) exp0 exp1 rhoV rhoF sto
-eE (BAnd exp0 exp1) rhoV rhoF sto = evalBoolBinOp (&&) exp0 exp1 rhoV rhoF sto
-eE (BXor exp0 exp1) rhoV rhoF sto = evalBoolBinOp (/=) exp0 exp1 rhoV rhoF sto
-
-eE (BDictHasKey (Ident dict) exp0) rhoV rhoF sto = do
-        let ComplexVal (VDict d) = getVarVal rhoV sto dict
-        (sto', VInt i) <- eE exp0 rhoV rhoF sto
-        return (sto', VBool (mapHasKey d i))
-
--- Helper functions
-evalBinaryOp :: (Integer -> Integer -> Integer) -> Expr -> Expr -> VEnv -> FEnv -> Store -> MyExprMonad
-evalBinaryOp op exp0 exp1 rhoV rhoF sto = do
-    (sto', VInt x) <- eE exp0 rhoV rhoF sto
-    (sto'', VInt y) <- eE exp1 rhoV rhoF sto'
-    return (sto'', VInt (x `op` y))
-
-evalBoolBinOp :: (Bool -> Bool -> Bool) -> Expr -> Expr -> VEnv -> FEnv -> Store -> MyExprMonad
-evalBoolBinOp op exp0 exp1 rhoV rhoF sto = do
-    (sto', VBool x) <- eE exp0 rhoV rhoF sto
-    (sto'', VBool y) <- eE exp1 rhoV rhoF sto'
-    return (sto'', VBool (x `op` y))
-
-evalIntBinOp :: (Integer -> Integer -> Bool) -> Expr -> Expr -> VEnv -> FEnv -> Store -> MyExprMonad
-evalIntBinOp op exp0 exp1 rhoV rhoF sto = do
-    (sto', VInt x) <- eE exp0 rhoV rhoF sto
-    (sto'', VInt y) <- eE exp1 rhoV rhoF sto'
-    return (sto'', VBool (x `op` y))
-
-evalSimpleValBinOp :: (SimpleValue -> SimpleValue -> Bool) -> Expr -> Expr -> VEnv -> FEnv -> Store -> MyExprMonad
-evalSimpleValBinOp op exp0 exp1 rhoV rhoF sto = do
-    (sto', x) <- eE exp0 rhoV rhoF sto
-    (sto'', y) <- eE exp1 rhoV rhoF sto'
-    return (sto'', VBool (x `op` y))
-
------------------------------------------- INSTRUCTIONS (monadic) -------------------------------------------
+------------------------------------------ INSTRUCTIONS ------------------------------------------
 iMI :: Instr -> WorkingMonad (Maybe SimpleValue, VEnv, FMEnv)
 
 -- Version with new return type
@@ -677,48 +496,8 @@ iMI (ISpecStmt specStmt) = do
 -- Instructions include definitions and statements, so they can modify everything.
 -- StmtResult is either a store or a store and a value (returned from a return statement).
 -- StmtState is a pair of StmtResult and ControlFlow, which is used in loops.
-iI :: Instr -> VEnv -> FEnv -> Store -> Either Error (VEnv, FEnv, StmtState)
 
-{-
-ISeq.      Instr ::= Instr1 ";" Instr; -- right associative
-IDef.       Instr1 ::= Def;
-IStmt.      Instr1 ::= Stmt;
-ISpecStmt.   Instr1 ::= SpecStmt;
--}
-
--- Monadic versions of functions below:
--- if first instruction returns a value, we don't execute the second one.
--- Also, if any break or continue counter is greater than 0, we don't execute the second instruction.
-iI (ISeq instr0 instr1) rhoV rhoF sto = do
-    (rhoV', rhoF', (res, (breakCount, continueFlag))) <- iI instr0 rhoV rhoF sto
-    case res of
-        StoreAndValue sto' val -> return (rhoV', rhoF', (StoreAndValue sto' val, (breakCount, continueFlag)))
-        StoreOnly sto' ->
-            if breakCount > 0 || continueFlag then
-                return (rhoV', rhoF', (StoreOnly sto', (breakCount, continueFlag)))
-            else
-                iI instr1 rhoV' rhoF' sto'
-
--- -- For now, we won't use monad transformers. TODO Use Monad Transformers.
--- iI (IDef def) rhoV rhoF sto = do
---     let decRes = iD def rhoV rhoF sto
---     case decRes of
---         Left err -> Left err
---         Right (rhoV', rhoF', sto') -> return (rhoV', rhoF', (StoreOnly sto', (0, False)))
-
-iI (IStmt stmt) rhoV rhoF sto = do
-    let stmtRes = iS stmt rhoV rhoF sto
-    case stmtRes of
-        Left err -> Left err
-        Right (res, (breakCount, continueFlag)) -> return (rhoV, rhoF, (res, (breakCount, continueFlag)))
-
-
--- commented because the specstmt semantics has changed
--- iI (ISpecStmt specStmt) rhoV rhoF sto = do
---     let (rhoV', sto') = iSpecS specStmt rhoV rhoF sto
---     return (rhoV', rhoF, (StoreOnly sto', (0, False)))
-
--------------------------------VARIABLE DEFINITIONS (monadic)------------------------------------------------
+------------------------------------------ DEFINITIONS ------------------------------------------
 
 iMD :: Def -> WorkingMonad (VEnv, FMEnv)
 
@@ -785,9 +564,6 @@ iMD (FuncDef ftype (Ident func) params instr) = do
     let rhoF' = mapSet rhoF func x
     return (rhoV, rhoF')
 
-
---reszta todo (funkcje jako argumenty)
-
 msetarguments :: [FuncParam] -> [FuncArg] -> WorkingMonad (VEnv, FMEnv)
 msetarguments [] [] = do
     (rhoV, rhoF) <- ask
@@ -808,81 +584,8 @@ msetarguments (PFunc ftype (Ident func) : restParams) (FArg f : restArgs) = do
     local (const (rhoV, rhoF')) $ do
         msetarguments restParams restArgs
 
--------------------------------VARIABLE DEFINITIONS------------------------------------------------
--- Definitions also can modify everything.
-iD :: Def -> VEnv -> FEnv -> Store -> Either Error (VEnv, FEnv, Store)
+---------------------------------- ARGUMENTS AND PARAMETERS ----------------------------------------
 
-{-
-VarDef.        Def1 ::= SType Ident "=" Expr;
-
-ArrDefInit.    Def1 ::= "Array" SType Ident "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def1 ::= "Array" SType Ident "[" Expr "]";
-DictDef.       Def1 ::= "Dict" SType Ident;
-
--- functions can also have local variables inside, so we allow declarations in the function body
-FuncDef.       Def1 ::= FType Ident "(" Params ")" "{" Instr "}";
--}
-
--- Monad version of iD
-iD (VarDef stype (Ident var) expr) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> do
-            let (loc, sto'') = newloc sto'
-            let rhoV' = mapSet rhoV var (loc, (False, False))
-            return (rhoV', rhoF, setVarVal rhoV' sto'' var (SimpleVal val))
-
--- Arrays can be initialized with both boolean or integer values. Size must be a non-negative integer.
-iD (ArrDefInit stype (Ident arr) exprSize exprInitVal) rhoV rhoF sto = do
-    let sizeExprRes = eE exprSize rhoV rhoF sto
-    case sizeExprRes of
-        Left err -> Left err
-        Right (sto', VInt size) -> do
-            if size < 0 then Left (InvalidArraySize size)
-            else do
-                let initExprRes = eE exprInitVal rhoV rhoF sto'
-                case initExprRes of
-                    Left err -> Left err
-                    Right (sto'', val) -> do
-                        let (loc, sto''') = newloc sto''
-                        let arrVal = replicate (fromInteger size) val
-                        let rhoV' = mapSet rhoV arr (loc, (False, False))
-                        return (rhoV', rhoF, setVarVal rhoV' sto''' arr (ComplexVal (VArray arrVal)))
-
--- Now it's a bit tricky, because we need to know the type of the array to create it.
--- Integer arrays are initialized with zeros, boolean arrays with False.
-iD (ArrDef stype (Ident arr) exprSize) rhoV rhoF sto = do
-    let sizeExprRes = eE exprSize rhoV rhoF sto
-    case sizeExprRes of
-        Left err -> Left err
-        Right (sto', VInt size) -> do
-            if size < 0 then Left (InvalidArraySize size)
-            else do
-                let (loc, sto'') = newloc sto'
-                let arrVal = replicate (fromInteger size) (if stype == STInt then VInt 0 else VBool False)
-                let rhoV' = mapSet rhoV arr (loc, (False, False))
-                return (rhoV', rhoF, setVarVal rhoV' sto'' arr (ComplexVal (VArray arrVal)))
-
--- Dictionaries are empty by default.
-iD (DictDef stype (Ident dict)) rhoV rhoF sto = do
-    let (loc, sto') = newloc sto
-    let rhoV' = mapSet rhoV dict (loc, (False, False))
-    return (rhoV', rhoF, setVarVal rhoV' sto' dict (ComplexVal (VDict empty)))
-
-iD (FuncDef ftype (Ident func) params instr) rhoV rhoF sto = do
-    let x args sto' = do
-        let paramList = eP params
-        let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto'
-        let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto''
-        let rhoF''' = mapSet rhoF'' func x
-        let instrRes = iI instr rhoV'' rhoF''' sto'''
-        case instrRes of
-            Left err -> Left err
-            Right (_, _, (StoreAndValue resSto resVal, _)) -> return (resSto, resVal)
-    return (rhoV, mapSet rhoF func x, sto)
-
-----------------------------------ARGUMENTS AND PARAMETERS (monadic) ----------------------------------------
 eMa :: Args -> WorkingMonad [FuncArg]
 
 
@@ -901,8 +604,6 @@ eMa (ArgsLambdaMany lambda args) = do
     f <- eML lambda
     fs <- eMa args
     return (FArg f : fs)
-
-
 
 eML :: Lambda -> WorkingMonad MFunc
 
@@ -931,61 +632,6 @@ eMP (ParamFuncMany ftype (Ident func) params) = do
     return ((PFunc ftype (Ident func)) : rest)
 
 
-----------------------------------ARGUMENTS AND PARAMETERS ----------------------------------------
-eA :: Args -> VEnv -> FEnv -> Store -> Either Error (Store, [FuncArg])
-
-{-
-ArgsVoid. Args ::= "void";
-ArgsOne.  Args ::= Expr;
-ArgsMany. Args ::= Expr "," Args;
-ArgsLambda. Args ::= Lambda;
-ArgsLambdaMany. Args ::= Lambda "," Args;
--}
-
--- Monadic versions
-eA (ArgsVoid) rhoV rhoF sto = Right (sto, [])
-
-eA (ArgsOne expr) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> return (sto', [SimpleArg val])
-
-eA (ArgsMany expr args) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> do
-            let argsRes = eA args rhoV rhoF sto'
-            case argsRes of
-                Left err -> Left err
-                Right (sto'', args') -> return (sto'', (SimpleArg val) : args')
-
--- eA (ArgsLambda lambda) rhoV rhoF sto = Right (sto, [FArg (eL lambda rhoV rhoF sto)])
-
--- eA (ArgsLambdaMany lambda args) rhoV rhoF sto = do
---     let argsRes = eA args rhoV rhoF sto
---     case argsRes of
---         Left err -> Left err
---         Right (sto', args') -> do
---             return (sto', (FArg (eL lambda rhoV rhoF sto)) : args')
-
--- Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
--- Important! Lambda definition itself can not return an error.
-eL :: Lambda -> VEnv -> FEnv -> Store -> Func
-
--- Monadic version of lambda:
-eL (Lam ftype params instr) rhoV rhoF sto =
-    x where
-        x args sto' = do
-            let paramList = eP params
-            let (rhoV', rhoF', sto'') = prepareEnvs paramList rhoV rhoF sto'
-            let (rhoV'', rhoF'', sto''') = assignArgs paramList args rhoV' rhoF' sto''
-            let instrRes = iI instr rhoV'' rhoF'' sto'''
-            case instrRes of
-                Left err -> Left err
-                Right (_, _, (StoreAndValue resSto resVal, _)) -> return (resSto, resVal)
-
 -- Parameters
 eP :: Params -> [FuncParam]
 
@@ -1005,50 +651,7 @@ eP (ParamFunc ftype (Ident func)) = [PFunc ftype (Ident func)]
 eP (ParamVarMany stype (Ident var) params) = (PSimple stype (Ident var)) : eP params
 eP (ParamFuncMany ftype (Ident func) params) = (PFunc ftype (Ident func)) : eP params
 
------------------------------------------- FUNCTION DEFINITIONS -----------------------------------
--- Now the most interesting part - functions. Functions can take simple values or other functions as arguments.
--- They can also have local variables in them and make recursive calls. They return simple values.
--- First we'll create a helper function to "prepare" the environments based on the parameters.
--- Then a function to assign the arguments to the parameters in new environments.
--- Then execute the function body.
-
--- FuncParam can be either a simple type or a function type.
-prepareEnvs :: [FuncParam] -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
-
-prepareEnvs [] rhoV rhoF sto = (rhoV, rhoF, sto)
-
-prepareEnvs ((PSimple stype (Ident var)):params) rhoV rhoF sto =
-    let (loc, sto') = newloc sto in
-    let rhoV' = mapSet rhoV var (loc, (False, False)) in
-        prepareEnvs params rhoV' rhoF sto'
-
--- Since lambda can be the only functional-argument in our language, we can create a dummy function
--- for now and assign it to the parameter.
-prepareEnvs ((PFunc ftype (Ident func)):params) rhoV rhoF sto =
-    let (loc, sto') = newloc sto in
-    let rhoF' = mapSet rhoF func (\_ _ -> Right (sto', VInt 0)) in
-        prepareEnvs params rhoV rhoF' sto'
-
--- We take each parameter and assign the corresponding argument to it. This function will be called
--- after prepareEnvs, so we can assume that the environments are already prepared.
--- NOTE: assignArgs does not modify the VEnv.
-assignArgs :: [FuncParam] -> [FuncArg] -> VEnv -> FEnv -> Store -> (VEnv, FEnv, Store)
-
--- We iterate through the parameters and arguments at the same time, determine what type is the parameter,
--- find it's location in the environment and assign the argument to it.
-assignArgs [] [] rhoV rhoF sto = (rhoV, rhoF, sto)
-
-assignArgs ((PSimple stype (Ident var)):params) ((SimpleArg val):args) rhoV rhoF sto =
-    let loc = mapGet rhoV var in
-    let sto' = setVarVal rhoV sto var (SimpleVal val) in
-        assignArgs params args rhoV rhoF sto'
-
--- We need to override the dummy function which we assigned before with the actual function in the argument.
--- assignArgs ((PFunc ftype (Ident func)):params) ((FArg f):args) rhoV rhoF sto =
---     let rhoF' = mapSet rhoF func f in
---         assignArgs params args rhoV rhoF' sto
-
------------------------------------------- STATEMENTS (monadic) ---------------------------------------------
+------------------------------------------ STATEMENTS ------------------------------------------
 
 iMS :: Stmt -> WorkingMonad (Maybe SimpleValue)
 
@@ -1219,257 +822,8 @@ iMS (DictElSet (Ident dict) exprKey exprVal) = do
     msetVarVal dict (ComplexVal (VDict (mapSet d key val)))
     return (Nothing)
 
------------------------------------------- STATEMENTS ---------------------------------------------
--- Statements do not modify the environment, but can modify the store. The return statement
--- can also return a value, so we take that into account in the function type.
 
-iS :: Stmt -> VEnv -> FEnv -> Store -> Either Error StmtState
-
--- First, break and continue statements. They modify the control flow.
--- break n means break n nested loops, continue outer n means first perform n breaks, then continue.
-{-
-SBreak.     Stmt1 ::= "break" "(" Expr ")";
-SBreak1.    Stmt1 ::= "break";
-SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
-SContinue0. Stmt1 ::= "continue";
--}
-
--- Statements should not get StoreAndValue as a argument, because the return statement
--- should quit the function immediately.
-iS (SBreak exp0) rhoV rhoF sto = do
-    let exprRes = eE exp0 rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt n) -> do
-            if n < 0 then Left (InvalidBreakArgument n)
-            else return (StoreOnly sto', (n, False))
-
-iS (SBreak1) rhoV rhoF sto = Right (StoreOnly sto, (1, False))
-
-iS (SContinue exp0) rhoV rhoF sto = do
-    let exprRes = eE exp0 rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt n) -> do
-            if n < 0 then Left (InvalidContinueArgument n)
-            else return (StoreOnly sto', (0, True))
-
-iS (SContinue0) rhoV rhoF sto = Right (StoreOnly sto, (0, True))
-
-{-
-internal SIf. Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
-sif1.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}" "else" "{" Instr "}";
-sif2.       Stmt1 ::= "if" "(" Expr ")" "{" Instr "}";
-SWhile.     Stmt1 ::= "while" "(" Expr ")" "{" Instr "}";
-SFor.       Stmt1 ::= "for" "(" Ident "=" Expr "to" Expr ")" "{" Instr "}";
--}
-
-iS (SIf expr i0 i1) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VBool b) -> do
-            if b then do
-                let trueBranchRes = iI i0 rhoV rhoF sto'
-                case trueBranchRes of
-                    Left err -> Left err
-                    Right (_, _, res) -> return res
-            else do
-                let falseBranchRes = iI i1 rhoV rhoF sto'
-                case falseBranchRes of
-                    Left err -> Left err
-                    Right (_, _, res) -> return res
-
-iS (SWhile expr i) rhoV rhoF sto = x rhoV rhoF sto where
-    x rv rf st = do
-        let exprRes = eE expr rv rf st
-        case exprRes of
-            Left err -> Left err
-            Right (st', VBool b) -> do
-                if b then
-                    let instrRes = iI i rv rf st' in
-                    case instrRes of
-                        Left err -> Left err
-                        Right (rv', rf', (res, (breakCount, continueFlag))) -> do
-                            case res of
-                                StoreAndValue st'' val -> return (StoreAndValue st'' val, (0, False))
-                                StoreOnly st'' ->
-                                    if breakCount > 0 then
-                                        return (StoreOnly st'', (breakCount - 1, continueFlag))
-                                    else if continueFlag then
-                                        x rv' rf' st''
-                                    else
-                                        x rv' rf' st''
-                else
-                    return (StoreOnly st', (0, False))
-
-iS (SFor (Ident var) exprFrom exprTo instr) rhoV rhoF sto = do
-    let fromExprRes = eE exprFrom rhoV rhoF sto
-    case fromExprRes of
-        Left err -> Left err
-        Right (sto', VInt from) -> do
-            let toExprRes = eE exprTo rhoV rhoF sto'
-            case toExprRes of
-                Left err -> Left err
-                Right (sto'', VInt to) -> do
-                    let (loc, sto''') = newloc sto''
-                    let rhoV' = mapSet rhoV var (loc, (False, False))
-                    let sto'''' = setVarVal rhoV' sto''' var (SimpleVal (VInt from))
-
-                    let x rv rf st = do
-                        let SimpleVal (VInt i) = getVarVal rhoV' st var
-                        if i <= to then
-                            let instrRes = iI instr rv rf st in
-                            case instrRes of
-                                Left err -> Left err
-                                Right (rv', rf', (res, (breakCount, continueFlag))) -> do
-                                    case res of
-                                        StoreAndValue sto' val -> return (StoreAndValue sto' val, (0, False))
-                                        StoreOnly sto' ->
-                                            if breakCount > 0 then
-                                                return (StoreOnly sto', (breakCount - 1, continueFlag))
-                                            else if continueFlag then
-                                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x rv' rf' st'
-                                            else
-                                                let st' = setVarVal rhoV' sto' var (SimpleVal (VInt (i + 1))) in x rv' rf' st'
-                        else
-                            return (StoreOnly st, (0, False))
-
-                    x rhoV' rhoF sto'''
-
-{-
-SSkip.      Stmt1 ::= "skip";
-SReturn.    Stmt1 ::= "return" "(" Expr ")";
-SPrint.     Stmt1 ::= "print" "(" Expr ")";
-SSwap.      Stmt1 ::= "swap" "(" Ident "," VarIdent ")";
-SBreak.     Stmt1 ::= "break" "(" Expr ")";
-SBreak1.    Stmt1 ::= "break";
-SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
-SContinue0. Stmt1 ::= "continue";
--}
-
-iS (SSkip) rhoV rhoF sto = Right (StoreOnly sto, (0, False))
-
-iS (SReturn expr) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> return (StoreAndValue sto' val, (0, False))
-
-iS (SPrint expr) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> do
-            unsafePrint ("Printing: " ++ show val) `seq` return (StoreOnly sto', (0, False))
-
--- Assigning variables.
--- NOTE: x += f(args) calculates x first, then f, so if f modifies x, it will be unseen.
-{-
-VarAssign.         Stmt1 ::= Ident "=" Expr;
-VarAssignPlus.     Stmt1 ::= Ident "+=" Expr;
-VarAssignMinus.    Stmt1 ::= Ident "-=" Expr;
-VarAssignMul.      Stmt1 ::= Ident "*=" Expr;
-VarAssignDiv.      Stmt1 ::= Ident "/=" Expr;
-VarAssignMod.      Stmt1 ::= Ident "%=" Expr;
-
-ArrElSet.      Stmt1 ::= Ident "[" Expr "]" "=" "(" Expr ")";
-DictElSet.     Stmt1 ::= Ident "set" "[" Expr "]" "to" "(" Expr ")";
--}
-
--- Monadic versions:
-iS (VarAssign (Ident var) expr) rhoV rhoF sto = do
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', val) -> do
-            let sto'' = setVarVal rhoV sto' var (SimpleVal val)
-            return (StoreOnly sto'', (0, False))
-
-iS (VarAssignPlus (Ident var) expr) rhoV rhoF sto = do
-    let SimpleVal (VInt x) = getVarVal rhoV sto var
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt y) -> do
-            let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x + y)))
-            return (StoreOnly sto'', (0, False))
-
-iS (VarAssignMinus (Ident var) expr) rhoV rhoF sto = do
-    let SimpleVal (VInt x) = getVarVal rhoV sto var
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt y) -> do
-            let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x - y)))
-            return (StoreOnly sto'', (0, False))
-
-iS (VarAssignMul (Ident var) expr) rhoV rhoF sto = do
-    let SimpleVal (VInt x) = getVarVal rhoV sto var
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt y) -> do
-            let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x * y)))
-            return (StoreOnly sto'', (0, False))
-
--- In the following two assignments, we need to handle division / modulo by zero.
-
-iS (VarAssignDiv (Ident var) expr) rhoV rhoF sto = do
-    let SimpleVal (VInt x) = getVarVal rhoV sto var
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt y) -> do
-            if y == 0 then Left DivByZero
-            else do
-                let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `div` y)))
-                return (StoreOnly sto'', (0, False))
-
-iS (VarAssignMod (Ident var) expr) rhoV rhoF sto = do
-    let SimpleVal (VInt x) = getVarVal rhoV sto var
-    let exprRes = eE expr rhoV rhoF sto
-    case exprRes of
-        Left err -> Left err
-        Right (sto', VInt y) -> do
-            if y == 0 then Left DivByZero
-            else do
-                let sto'' = setVarVal rhoV sto' var (SimpleVal (VInt (x `mod` y)))
-                return (StoreOnly sto'', (0, False))
-
--- Now monadic versions of array and dictionary assignments. Index out of bounds error can occur.
-
-iS (ArrElSet (Ident arr) exprIndex exprVal) rhoV rhoF sto = do
-    let ComplexVal (VArray a) = getVarVal rhoV sto arr
-    let exprIndexRes = eE exprIndex rhoV rhoF sto
-    case exprIndexRes of
-        Left err -> Left err
-        Right (sto', VInt i) -> do
-            if i < 0 || i >= fromIntegral (length a) then Left (IndexOutOfBounds i)
-            else do
-                let exprValRes = eE exprVal rhoV rhoF sto'
-                case exprValRes of
-                    Left err -> Left err
-                    Right (sto'', val) -> do
-                        let a' = replaceNth a (fromInteger i) val
-                        let sto''' = setVarVal rhoV sto'' arr (ComplexVal (VArray a'))
-                        return (StoreOnly sto''', (0, False))
-
-iS (DictElSet (Ident dict) exprIndex exprVal) rhoV rhoF sto = do
-    let ComplexVal (VDict d) = getVarVal rhoV sto dict
-    let exprIndexRes = eE exprIndex rhoV rhoF sto
-    case exprIndexRes of
-        Left err -> Left err
-        Right (sto', VInt i) -> do
-            let exprValRes = eE exprVal rhoV rhoF sto'
-            case exprValRes of
-                Left err -> Left err
-                Right (sto'', val) -> do
-                    let d' = insert i val d
-                    let sto''' = setVarVal rhoV sto'' dict (ComplexVal (VDict d'))
-                    return (StoreOnly sto''', (0, False))
-
--------------------------------------SPECIAL STATEMENTS (monadic) --------------------------------------------
+------------------------------------------ SPECIAL STATEMENTS ------------------------------------------
 
 mgetvarloc :: Ident -> WorkingMonad (Loc, DebugFlags)
 
@@ -1514,60 +868,12 @@ iMSpecS (DebugReadDisable (Ident var)) = do
     return (rhoV', rhoF)
 
 
--------------------------------------SPECIAL STATEMENTS--------------------------------------------
--- Special statements can modify the VEnv (setting debug flags) or the store (swapping variables).
--- There is no function swapping for now, so FEnv is not modified.
-iSpecS :: SpecStmt -> VEnv -> FEnv -> Store -> (VEnv, Store)
-
-{-
-SSwap.              SpecStmt ::= "swap" "(" Ident "," Ident ")";
-DebugAssEnable.     SpecStmt ::= "debug" "assignment" "enable" Ident;      -- ;)
-DebugAssDisable.    SpecStmt ::= "debug" "assignment" "disable" Ident;
-DebugReadEnable.    SpecStmt ::= "debug" "reading" "enable" Ident;
-DebugReadDisable.   SpecStmt ::= "debug" "reading" "disable" Ident;
--}
-
--- Swapping does NOT swap the debugging flags. It only swaps the locations in the store.
--- It does not swap the values associated with the locations, it swaps locations themselves.
--- we can use setVarLoc to change the location of the variable.
-iSpecS (SSwap (Ident var1) (Ident var2)) rhoV rhoF sto =
-    let (loc1, _) = mapGet rhoV var1 in
-    let (loc2, _) = mapGet rhoV var2 in
-    let rhoV' = setVarLoc rhoV var1 loc2 in
-    let rhoV'' = setVarLoc rhoV' var2 loc1 in
-        (rhoV'', sto)
-
-iSpecS (DebugAssEnable (Ident var)) rhoV rhoF sto =
-    let (loc, (readFlag, _)) = mapGet rhoV var in
-    let rhoV' = mapSet rhoV var (loc, (readFlag, True)) in
-        (rhoV', sto)
-
-iSpecS (DebugAssDisable (Ident var)) rhoV rhoF sto =
-    let (loc, (readFlag, _)) = mapGet rhoV var in
-    let rhoV' = mapSet rhoV var (loc, (readFlag, False)) in
-        (rhoV', sto)
-
-iSpecS (DebugReadEnable (Ident var)) rhoV rhoF sto =
-    let (loc, (_, writeFlag)) = mapGet rhoV var in
-    let rhoV' = mapSet rhoV var (loc, (True, writeFlag)) in
-        (rhoV', sto)
-
-iSpecS (DebugReadDisable (Ident var)) rhoV rhoF sto =
-    let (loc, (_, writeFlag)) = mapGet rhoV var in
-    let rhoV' = mapSet rhoV var (loc, (False, writeFlag)) in
-        (rhoV', sto)
-
-
-
 
 -- Example usage of the interpreter
 main :: IO ()
 main = do
     getContents >>= mcompute
     putStrLn ""
-
-rhoF0:: FEnv
-rhoF0 = fromList []
 
 rhoFM0:: FMEnv
 rhoFM0 = fromList []
@@ -1580,29 +886,6 @@ sto0 = CStore empty 0
 
 tsto0:: TypeStore
 tsto0 = TStore empty 0
-
--- After computations we print the VEnv and the Store.
---compute s =
---    case pInstr (myLexer s) of
---        Left err -> do
---            putStrLn "\nParse              Failed...\n"
---            putStrLn err
---            exitFailure
---        Right e -> do
---            putStrLn "\nParse Successful!\n"
---            let instrRes = iI e rhoV0 rhoF0 sto0
---            case instrRes of
---                Left err -> do
---                    putStrLn "\nError during computation:"
---                    putStrLn $ show err
---                Right (rhoV', rhoF', (res, _)) -> do
---                    putStrLn "\nInterpretation     Successful!\n"
---                    rhoV' `seq` rhoF' `seq` res `seq` do
---                    putStrLn "\nEnd of computation"
---                    putStrLn "\nVEnv:"
---                    putStrLn $ show rhoV'
---                    putStrLn "\nStore:"
---                    putStrLn $ show res
 
 
 mcompute :: String -> IO ()
@@ -1619,7 +902,7 @@ mcompute s =
             let initialState = (sto0, (0, False))
 
             -- For static type checking:
-            -- let initialEnv = (rhoV0, rhoF0, TypeCheck)
+            -- let initialEnv = (rhoV0, rhoFM0, TypeCheck)
             -- let initialState = (sto0, tsto0, (0, False))
 --            typeCheckResult <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
 --            case typeCheckResult of
@@ -1648,11 +931,6 @@ mcompute s =
                     putStrLn "\nStore:"
                     putStrLn $ show sto0
 
--- Definicja funkcji
---processFile path = do
---    content <- readFile path
---    let strippedContent = Prelude.filter (/= '\n') content
---    compute strippedContent
 
 mprocessFile path = do
     content <- readFile path

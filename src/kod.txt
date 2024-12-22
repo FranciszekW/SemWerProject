@@ -94,4 +94,8 @@ IntFunc zlozenie(IntFunc x, BoolFunc y, Int n) {
     return (y(x(x(n))));
 };
 
-print(zlozenie(IntFunc lambda (Int x) -> {return (x*x)}, BoolFunc lambda (Int x) -> {return (x == 10000)}, 10));
+print(collatz(19));
+print(silnia(7));
+print(sieve(100));
+/*
+print(zlozenie(IntFunc lambda (Int x) -> {return (x*x)}, BoolFunc lambda (Int x) -> {return (x == 10000)}, 10)); */

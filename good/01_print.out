@@ -1,0 +1,13 @@
+
+Parse Successful!
+
+VInt 1
+
+End of computation
+
+
+VEnv:
+fromList []
+
+Store:
+CStore {currMap = fromList [], nextLoc = 0}

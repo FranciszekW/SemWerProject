@@ -11,7 +11,7 @@ module Main where
 
 import Prelude
 
-import System.IO (readFile)
+import System.IO (readFile, hFlush, stdout, stderr, hPutStrLn)
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
 import System.IO.Unsafe   ( unsafePerformIO )
@@ -31,7 +31,7 @@ import FraJer.Abs   ( SType(..), FType(..), Ident(..), Expr(..), Args(..), Param
 import FraJer.Lex   ( Token, mkPosToken )
 import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
 import FraJer.Print ( Print, printTree )
-import FraJer.Skel  ()
+--import FraJer.Skel  ()
 
 mapGet :: (Ord k) => (Map k v) -> k -> v
 mapGet map arg = map ! arg
@@ -492,10 +492,6 @@ iMI (ISpecStmt specStmt) = do
     (rhoV, rhoF) <- iMSpecS specStmt
     return (Nothing, rhoV, rhoF)
 
------------------------------------------- INSTRUCTIONS -------------------------------------------
--- Instructions include definitions and statements, so they can modify everything.
--- StmtResult is either a store or a store and a value (returned from a return statement).
--- StmtState is a pair of StmtResult and ControlFlow, which is used in loops.
 
 ------------------------------------------ DEFINITIONS ------------------------------------------
 
@@ -872,8 +868,11 @@ iMSpecS (DebugReadDisable (Ident var)) = do
 -- Example usage of the interpreter
 main :: IO ()
 main = do
-    getContents >>= mcompute
-    putStrLn ""
+    args <- getArgs
+    case args of
+        [filePath] -> mprocessFile filePath
+        _ -> putStrLn "Usage: interpreter <file>"
+
 
 rhoFM0:: FMEnv
 rhoFM0 = fromList []
@@ -919,11 +918,11 @@ mcompute s =
 
             case result of
                 Left err -> do
-                    putStrLn "\nComputation Failed...\n"
-                    putStrLn $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
+                    putStrLn "\nComputation Failed...\n" >> hFlush stdout
+                    hPutStrLn stderr $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
                     exitFailure
                 Right _ -> do
-                    putStrLn "\nEnd of computation\n"
+                    putStrLn "\nEnd of computation\n" >> hFlush stdout
 
                     putStrLn "\nVEnv:"
                     putStrLn $ show rhoV0
@@ -932,6 +931,7 @@ mcompute s =
                     putStrLn $ show sto0
 
 
+mprocessFile :: FilePath -> IO ()
 mprocessFile path = do
     content <- readFile path
     let strippedContent = Prelude.filter (/= '\n') content

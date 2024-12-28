@@ -311,15 +311,6 @@ eMe (VarVal (Ident var)) = do
     case val of
         SimpleVal x -> return x
         ComplexVal _ -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
-        
---eMe (VarVal (Ident var)) = do
---    (rhoV, _) <- ask
---    sto <- getStore
---    case Data.Map.lookup var rhoV of
---        Just (loc, _) -> case (mapGet (currMap sto) loc) of 
---            SimpleVal val -> return val
---            ComplexVal val -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
---        Nothing -> throwError (VariableNotDefined (Ident var))
 
 eMe (EPlus exp0 exp1) = do
     (VInt x) <- eMe exp0
@@ -891,11 +882,11 @@ mcompute :: String -> IO ()
 mcompute s =
     case pInstr (myLexer s) of
         Left err -> do
-            putStrLn "\nParse Failed...\n"
+            putStrLn "Parse Failed...\n"
             putStrLn err
             exitFailure
         Right e -> do
-            putStrLn "\nParse Successful!\n"
+            putStrLn "Parse Successful!\n"
 
             let initialEnv = (rhoV0, rhoFM0)
             let initialState = (sto0, (0, False))
@@ -918,17 +909,17 @@ mcompute s =
 
             case result of
                 Left err -> do
-                    putStrLn "\nComputation Failed...\n" >> hFlush stdout
+                    putStrLn "Computation Failed..." >> hFlush stdout
                     hPutStrLn stderr $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
                     exitFailure
-                Right _ -> do
-                    putStrLn "\nEnd of computation\n" >> hFlush stdout
-
-                    putStrLn "\nVEnv:"
-                    putStrLn $ show rhoV0
-
-                    putStrLn "\nStore:"
-                    putStrLn $ show sto0
+                Right res -> do
+                    case res of
+                        (Just val, _, _) -> do
+                            putStrLn "Computation Successful!" >> hFlush stdout
+                            putStrLn $ "Program returned with value: " ++ show val
+                        (Nothing, _, _) -> do
+                            putStrLn "Computation Successful!\n" >> hFlush stdout
+                            putStrLn "Program returned without a value."
 
 
 mprocessFile :: FilePath -> IO ()

@@ -547,7 +547,9 @@ iMD (FuncDef ftype (Ident func) params instr) = do
             (res, _, _) <- local (const (rhoV, rhoF')) (iMI instr)
             case res of
                 Just val -> return (val)
-                Nothing -> return (VInt 0)
+                Nothing -> case ftype of
+                    FTInt -> return (VInt 0)
+                    FTBool -> return (VBool False)
     let rhoF' = mapSet rhoF func x
     return (rhoV, rhoF')
 

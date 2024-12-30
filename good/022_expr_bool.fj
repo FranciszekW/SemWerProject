@@ -1,0 +1,4 @@
+Bool a = true;
+print (a or false);
+print (a and false);
+print (a xor true)

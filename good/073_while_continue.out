@@ -1,0 +1,11 @@
+Parse Successful!
+
+VInt 8
+VInt 6
+VInt 4
+VInt 2
+VInt 0
+VInt (-1)
+Computation Successful!
+
+Program returned without a value.

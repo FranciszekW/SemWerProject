@@ -1,0 +1,7 @@
+Int x = 10;
+while(true) {
+    if(x-- < 0){
+        break;
+    }
+};
+print(x);

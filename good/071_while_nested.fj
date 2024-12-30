@@ -1,0 +1,8 @@
+Int x = 0;
+while (x < 4) {
+    Int y = 0;
+    while(y < x) {
+        print(y++)
+    };
+    print(x++)
+}

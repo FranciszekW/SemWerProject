@@ -1,5 +1,6 @@
 -- TODOS:
 -- > Static type checking
+-- > Change syntax so that function as a parameter must also have its parameters specified
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -915,7 +916,25 @@ evalFuncType :: FuncType -> FType
 evalFuncType (FTI FTInt) = FuncInt FTInt
 evalFuncType (FTB FTBool) = FuncBool FTBool
 
+evalFuncReturnType :: FuncType -> SType
+evalFuncReturnType (FTI FTInt) = SimpleInt STInt
+evalFuncReturnType (FTB FTBool) = SimpleBool STBool
+
 ------------------------------------------ TYPE CHECKING -------------------------------------------
+--data Error =  DivByZero
+--            | ModByZero
+--            | KeyNotInDict DictKey
+--            | FunctionNotInScope Ident
+--            | IndexOutOfBounds Integer
+--            | InvalidArraySize Integer
+--            | InvalidBreakArgument Integer
+--            | InvalidContinueArgument Integer
+--            | TypeMismatch Type Type
+--            | VariableNotDefined Ident
+--            | BreakUsageOutsideLoop
+--            | ContinueUsageOutsideLoop
+--            | NotASimpleValue Ident
+--            | CustomError String
 -- Static type checker
 
 data SType = SimpleInt STInt | SimpleBool STBool deriving (Show, Eq)
@@ -930,7 +949,7 @@ data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
 data FuncParam = PSimple SType Ident | PFunc FType Ident deriving (Show, Eq)
 
 -- Function types (can take functions as arguments, but return only simple types)
-data DetailedFuncType = DetFunc [FuncParam] SType deriving (Show, Eq)
+data DetailedFuncType = DetFunc [Type] SType deriving (Show, Eq)
 
 typeof :: SimpleValue -> Type
 typeof (VInt _) = TSimple (SimpleInt STInt)
@@ -1026,6 +1045,19 @@ setVarType var t = do
             putTStore tsto'
         Nothing -> throwError (VariableNotDefined (Ident var))
 
+getFuncType :: Var -> TypeMonad Type
+getFuncType var = do
+    (_, tfenv) <- ask
+    case Data.Map.lookup var tfenv of
+        Just t -> return (TFunction t)
+        Nothing -> throwError (FunctionNotInScope (Ident var))
+
+setFuncType :: Var -> DetailedFuncType -> TypeMonad TFEnv
+setFuncType var t = do
+    (trhoV, tfenv) <- ask
+    let tfenv' = mapSet tfenv var t
+    return tfenv'
+
 
 -------------------------------------- EXPRESSIONS ------------------------------------------------
 -- Now type checking functions, similarly to semantic functions, we create separate ones
@@ -1034,3 +1066,178 @@ setVarType var t = do
 checkExpr :: Expr -> TypeMonad Type
 
 checkExpr (ENum _) = return (TSimple (SimpleInt STInt))
+
+checkExpr (FuncVal (Ident func) args) = do
+    t <- getFuncType func
+    case t of
+        TFunction (DetFunc paramTypes retType) -> do
+            argTypes <- checkArgs args
+            if argTypes == paramTypes then return (TSimple retType)
+            else throwError (TypeMismatch (TFunction (DetFunc paramTypes retType)) (TFunction (DetFunc argTypes retType)))
+        _ -> throwError (FunctionNotInScope (Ident func))
+
+checkExpr (VarVal (Ident var)) = getVarType var
+
+checkExpr (EPlus exp0 exp1) = checkBinaryIntOp exp0 exp1
+checkExpr (EMinus exp0 exp1) = checkBinaryIntOp exp0 exp1
+checkExpr (EDiv exp0 exp1) = checkBinaryIntOp exp0 exp1
+checkExpr (EMul exp0 exp1) = checkBinaryIntOp exp0 exp1
+checkExpr (EMod exp0 exp1) = checkBinaryIntOp exp0 exp1
+
+checkExpr (ENeg exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> return (TSimple (SimpleInt STInt))
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkExpr (EArray (Ident arr) exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            t' <- getVarType arr
+            case t' of
+                TComplex (TArray st) -> return (TSimple st)
+                _ -> throwError (TypeMismatch (TComplex (TArray (SimpleInt STInt))) t')
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkExpr (EDict (Ident dict) exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            t' <- getVarType dict
+            case t' of
+                TComplex (TDict st) -> return (TSimple st)
+                _ -> throwError (TypeMismatch (TComplex (TDict (SimpleInt STInt))) t')
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkExpr (EPostInc (Ident var)) = checkIncDec var
+checkExpr (EPreInc (Ident var)) = checkIncDec var
+checkExpr (EPostDec (Ident var)) = checkIncDec var
+checkExpr (EPreDec (Ident var)) = checkIncDec var
+
+checkExpr (EEq exp0 exp1) = checkBinarySimplevalOp exp0 exp1
+checkExpr (ENeq exp0 exp1) = checkBinarySimplevalOp exp0 exp1
+
+checkExpr (ELt exp0 exp1) = checkBoolBinaryIntOp exp0 exp1
+checkExpr (EGt exp0 exp1) = checkBoolBinaryIntOp exp0 exp1
+checkExpr (EGeq exp0 exp1) = checkBoolBinaryIntOp exp0 exp1
+checkExpr (ELeq exp0 exp1) = checkBoolBinaryIntOp exp0 exp1
+
+checkExpr (BTrue) = return (TSimple (SimpleBool STBool))
+checkExpr (BFalse) = return (TSimple (SimpleBool STBool))
+
+checkExpr (BNot exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleBool STBool) -> return (TSimple (SimpleBool STBool))
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t)
+
+checkExpr (BOr exp0 exp1) = checkBinaryBoolOp exp0 exp1
+checkExpr (BAnd exp0 exp1) = checkBinaryBoolOp exp0 exp1
+checkExpr (BXor exp0 exp1) = checkBinaryBoolOp exp0 exp1
+
+checkExpr (BDictHasKey (Ident dict) exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            t' <- getVarType dict
+            case t' of
+                TComplex (TDict _) -> return (TSimple (SimpleBool STBool))
+                _ -> throwError (TypeMismatch (TComplex (TDict (SimpleInt STInt))) t')
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+-- helper functions:
+
+checkBinaryIntOp :: Expr -> Expr -> TypeMonad Type
+checkBinaryIntOp exp0 exp1 = do
+    t0 <- checkExpr exp0
+    t1 <- checkExpr exp1
+    case (t0, t1) of
+        (TSimple (SimpleInt STInt), TSimple (SimpleInt STInt)) -> return (TSimple (SimpleInt STInt))
+        (TSimple (SimpleInt STInt), _) -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t1)
+        -- When two types are not equal, we return the first one, as it is the one that caused the error
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t0)
+
+checkBinarySimplevalOp :: Expr -> Expr -> TypeMonad Type
+checkBinarySimplevalOp exp0 exp1 = do
+    t0 <- checkExpr exp0
+    t1 <- checkExpr exp1
+    case (t0, t1) of
+        (TSimple s0, TSimple s1) -> if s0 == s1 then return (TSimple (SimpleBool STBool))
+            else throwError (TypeMismatch (TSimple s0) (TSimple s1))
+        (TSimple _, _) -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t1)
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t0)
+
+checkBoolBinaryIntOp :: Expr -> Expr -> TypeMonad Type
+checkBoolBinaryIntOp exp0 exp1 = do
+    t0 <- checkExpr exp0
+    t1 <- checkExpr exp1
+    case (t0, t1) of
+        (TSimple (SimpleInt STInt), TSimple (SimpleInt STInt)) -> return (TSimple (SimpleBool STBool))
+        (TSimple (SimpleInt STInt), _) -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t1)
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t0)
+
+checkBinaryBoolOp :: Expr -> Expr -> TypeMonad Type
+checkBinaryBoolOp exp0 exp1 = do
+    t0 <- checkExpr exp0
+    t1 <- checkExpr exp1
+    case (t0, t1) of
+        (TSimple (SimpleBool STBool), TSimple (SimpleBool STBool)) -> return (TSimple (SimpleBool STBool))
+        (TSimple (SimpleBool STBool), _) -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t1)
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t0)
+
+checkIncDec :: Var -> TypeMonad Type
+checkIncDec var = do
+    t <- getVarType var
+    case t of
+        TSimple (SimpleInt STInt) -> return (TSimple (SimpleInt STInt))
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+-------------------------------------- ARGUMENTS AND PARAMETERS ---------------------------------------
+
+checkArgs :: Args -> TypeMonad [Type]
+
+checkArgs (ArgsVoid) = return []
+
+checkArgs (ArgsOne expr) = do
+    t <- checkExpr expr
+    return [t]
+
+checkArgs (ArgsMany expr args) = do
+    t <- checkExpr expr
+    ts <- checkArgs args
+    return (t : ts)
+
+checkArgs (ArgsLambda lambda) = do
+    t <- checkLambda lambda
+    return [t]
+
+checkArgs (ArgsLambdaMany lambda args) = do
+    t <- checkLambda lambda
+    ts <- checkArgs args
+    return (t : ts)
+
+
+checkLambda :: Lambda -> TypeMonad Type
+
+checkLambda (Lam ftype params instr) = do
+    let paramList = eP params
+    paramTypes <- checkParams paramList
+    let retType = evalFuncReturnType ftype
+    let funcType = DetFunc paramTypes retType
+    return (TFunction funcType)
+
+
+checkParams :: [FuncParam] -> TypeMonad [Type]
+checkParams [] = return []
+
+checkParams (PSimple stype (Ident var) : rest) = do
+    ts <- checkParams rest
+    return (TSimple stype : ts)
+
+-- TODO: Change syntax so that function as a parameter must also have its parameters specified
+checkParams (PFunc ftype (Ident var) : rest) = do
+    ts <- checkParams rest
+    return (TFunc ftype : ts)
+
+------------------------------------------ INSTRUCTIONS ------------------------------------------

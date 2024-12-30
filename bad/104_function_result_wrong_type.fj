@@ -1,0 +1,3 @@
+BoolFunc f(none) {
+    return(3)
+}

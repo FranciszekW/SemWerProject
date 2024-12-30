@@ -1,0 +1,15 @@
+Int x = 3;
+debug assignment enable x;
+print(x);
+if(x++ > 0) {
+    x = x + 2;
+    print(x);
+};
+x = 2;
+debug assignment disable x;
+print(x);
+if(x++ > 0) {
+    x = x + 2;
+    print(x);
+};
+x = 2;

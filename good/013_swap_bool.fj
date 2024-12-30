@@ -1,0 +1,5 @@
+Bool x = true;
+Bool y = false;
+swap (x, y);
+print(x);
+print(y);

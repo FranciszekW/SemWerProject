@@ -1,0 +1,4 @@
+IntFunc f(Int x) {
+    return(x)
+};
+return(f(true));

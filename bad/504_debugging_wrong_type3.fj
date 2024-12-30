@@ -1,0 +1,4 @@
+BoolFunc f(Int x) {
+    return(x);
+};
+debug assignment disable f;

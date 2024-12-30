@@ -513,7 +513,13 @@ iMD (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
                 controlFlow <- getControlFlow
                 put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
                 return (rhoV', rhoF)
-            _ -> throwError (TypeMismatch SType FType)
+            VBool initVal -> do
+                let (loc, sto') = newloc sto
+                let arrVal = replicate (fromInteger size) (VBool initVal)
+                let rhoV' = mapSet rhoV arr (loc, (False, False))
+                controlFlow <- getControlFlow
+                put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
+                return (rhoV', rhoF)
 
 iMD (ArrDef stype (Ident arr) exprSize) = do
     (rhoV, rhoF) <- ask

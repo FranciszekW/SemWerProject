@@ -1,0 +1,2 @@
+Dict Int a;
+return(a has key [true]);

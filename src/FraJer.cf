@@ -5,7 +5,7 @@ in BNFC.
 
 -}
 
-entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, SType, FType;
+entrypoints Instr, Expr, Stmt, Def, Params, Args, Lambda, SimpleType, FuncType;
 
 -- Syntax for comments
 comment "//" ;
@@ -17,10 +17,15 @@ comment "/*" "*/" ;
 -- ST ::= int | bool
 -- FT ::= Ifun | Bfun
 
-STInt.  SType ::= "Int";
-STBool. SType ::= "Bool";
-FTInt. FType ::= "IntFunc";
-FTBool. FType ::= "BoolFunc";
+STInt.  STInt ::= "Int";
+STBool. STBool ::= "Bool";
+FTInt. FTInt ::= "IntFunc";
+FTBool. FTBool ::= "BoolFunc";
+
+STI. SimpleType ::= STInt;
+STB. SimpleType ::= STBool;
+FTI. FuncType ::= FTInt;
+FTB. FuncType ::= FTBool;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -90,7 +95,7 @@ BDictHasKey.  Expr2 ::= Ident "has" "key" "[" Expr "]";
 
 -- BNFC expressions that define the part of the grammar for parameters and arguments
 -- args ::= void | e | e, args | Lambda | Lambda, args
--- Lambda ::= FType "lambda" (params) "->" { Instr }
+-- Lambda ::= FuncType "lambda" (params) "->" { Instr }
 -- params ::= none | type x | ftype f
 --                 | type x, params | ftype f , params
 
@@ -101,12 +106,12 @@ ArgsLambda. Args ::= Lambda;
 ArgsLambdaMany. Args ::= Lambda "," Args;
 
 ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= SType Ident;
-ParamFunc.       Params ::= FType Ident;
-ParamVarMany.    Params ::= SType Ident "," Params;
-ParamFuncMany.   Params ::= FType Ident "," Params;
+ParamVar.        Params ::= SimpleType Ident;
+ParamFunc.       Params ::= FuncType Ident;
+ParamVarMany.    Params ::= SimpleType Ident "," Params;
+ParamFuncMany.   Params ::= FuncType Ident "," Params;
 
-Lam. Lambda ::= FType "lambda" "(" Params ")" "->" "{" Instr "}";
+Lam. Lambda ::= FuncType "lambda" "(" Params ")" "->" "{" Instr "}";
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -122,16 +127,16 @@ _. Instr1 ::= Instr1 ";";
 
 -- Grammar for defining variables and functions
 -- vardef ::= type Ident = Expr | Array type Ident "[" Ie "]" (Ie) | Array type Ident "[" e "]" | Dict type Ident
--- funcdef ::= FType Ident (params) { I }
+-- funcdef ::= FuncType Ident (params) { I }
 
-VarDef.        Def1 ::= SType Ident "=" Expr;
+VarDef.        Def1 ::= SimpleType Ident "=" Expr;
 
 -- functions can also have local variables inside, so we allow declarations in the function body
-FuncDef.       Def1 ::= FType Ident "(" Params ")" "{" Instr "}";
+FuncDef.       Def1 ::= FuncType Ident "(" Params ")" "{" Instr "}";
 
-ArrDefInit.    Def1 ::= "Array" SType Ident "[" Expr "]" "(" Expr ")"; -- initialized with last argument
-ArrDef.        Def1 ::= "Array" SType Ident "[" Expr "]";
-DictDef.       Def1 ::= "Dict" SType Ident;
+ArrDefInit.    Def1 ::= "Array" SimpleType Ident "[" Expr "]" "(" Expr ")"; -- initialized with last argument
+ArrDef.        Def1 ::= "Array" SimpleType Ident "[" Expr "]";
+DictDef.       Def1 ::= "Dict" SimpleType Ident;
 
 _. Def ::= Def1;
 

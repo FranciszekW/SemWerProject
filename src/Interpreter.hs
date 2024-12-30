@@ -1,8 +1,5 @@
 -- TODOS:
--- > Static type checking (checking execution mode in every evaluation function).
--- Think about if it's reasonable to reuse the same monad for both type checking and runtime.
--- Another option is to create separate file for this and copy-paste almost everything
--- but with types.
+-- > Static type checking
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -26,7 +23,8 @@ import Data.Map
 import qualified GHC.Integer (leInteger) 
 
 -- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( SType(..), FType(..), Ident(..), Expr(..), Args(..), Params(..),
+import FraJer.Abs   ( STInt(..), STBool(..), FTInt(..), FTBool(..), SimpleType(..), FuncType(..),
+                      Ident(..), Expr(..), Args(..), Params(..),
                       Instr(..), Def(..), Stmt(..), SpecStmt(..), Lambda(..) )
 import FraJer.Lex   ( Token, mkPosToken )
 import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
@@ -42,22 +40,6 @@ mapSet map arg val = insert arg val map
 mapHasKey :: (Ord k) => (Map k v) -> k -> Bool
 mapHasKey map arg = member arg map
 
------------------------------------------- TYPES (sic!) -------------------------------------------
-
--- SType and FType are types from Frajer.cf.
-data Type = SType | FType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
-
--- Complex types (arrays and dictionaries)
-data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
-
-data FuncParam = PSimple SType Ident | PFunc FType Ident deriving (Show, Eq)
-
--- Function types (can take functions as arguments, but return only simple types)
-data DetailedFuncType = DetFunc [FuncParam] SType deriving (Show, Eq)
-
-typeof :: SimpleValue -> Type
-typeof (VInt _) = SType
-typeof (VBool _) = SType
 
 ------------------------------------------ DATATYPES ----------------------------------------------
 
@@ -87,7 +69,6 @@ data Value = SimpleVal SimpleValue | ComplexVal ComplexValue deriving (Show)
 -- Function arguments can be either simple values (Int, Bool) or functions themselves
 data FuncArg = SimpleArg SimpleValue | FArg MFunc
 
-
 data Error =  DivByZero
             | ModByZero
             | KeyNotInDict DictKey
@@ -98,6 +79,9 @@ data Error =  DivByZero
             | InvalidContinueArgument Integer
             | TypeMismatch Type Type
             | VariableNotDefined Ident
+            | BreakUsageOutsideLoop
+            | ContinueUsageOutsideLoop
+            | NotASimpleValue Ident
             | CustomError String
 
 instance Show Error where
@@ -111,6 +95,9 @@ instance Show Error where
     show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
     show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
     show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
+    show BreakUsageOutsideLoop = "Break used outside of loop"
+    show ContinueUsageOutsideLoop = "Continue used outside of loop"
+    show (NotASimpleValue (Ident var)) = "Variable " ++ var ++ " is not a simple value"
 
 ------------------------------------------ ENVIRONMENTS -------------------------------------------
 
@@ -133,18 +120,12 @@ data Store = CStore {currMap :: Map Loc Value, nextLoc :: Loc} deriving Show
 data StmtResult = StoreOnly Store | StoreAndValue Store SimpleValue deriving Show
 type StmtState = (StmtResult, ControlFlow)
 
-data ExecutionMode = TypeCheck | Runtime deriving (Show, Eq)
-data TypeStore = TStore {typeMap :: Map Var Type, nextTypeLoc :: Loc} deriving Show
 
 ------------------------------------------ MONADS -------------------------------------------------
 
 type MFunc = [FuncArg] -> WorkingMonad (SimpleValue)
 type FMEnv = Map Var MFunc
-type Env = (VEnv, FMEnv, ExecutionMode)
 
--- TODO: Change the reader to use Env instead of (VEnv, FMEnv). Also, change the state
--- to use (Store, TypeStore, ControlFlow). Will do this later,
--- because it's a lot of work and we want the code to compile for now :)
 newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
 
 instance MonadState (Store, ControlFlow) WorkingMonad where
@@ -183,12 +164,6 @@ instance MonadFail (Either Error) where
 
 ------------------------------------------ HELPER FUNCTIONS ---------------------------------------
 -- monads
-
--- Not working yet, because we need to change the reader to use Env instead of (VEnv, FMEnv).
---getExecutionMode :: WorkingMonad ExecutionMode
---getExecutionMode = WorkingMonad $ do
---    (_, _, mode) <- ask
---    return mode
 
 getStore :: WorkingMonad Store
 getStore = WorkingMonad $ do
@@ -310,7 +285,7 @@ eMe (VarVal (Ident var)) = do
     val <- mgetVarVal var
     case val of
         SimpleVal x -> return x
-        ComplexVal _ -> throwError (TypeMismatch SType (TComplex (TArray STInt))) -- TODO set an actual type, not always array of ints
+        ComplexVal _ -> throwError (NotASimpleValue (Ident var))
 
 eMe (EPlus exp0 exp1) = do
     (VInt x) <- eMe exp0
@@ -522,13 +497,14 @@ iMD (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
                 return (rhoV', rhoF)
 
 iMD (ArrDef stype (Ident arr) exprSize) = do
+    let arrType = evalSimpleType stype
     (rhoV, rhoF) <- ask
     sto <- getStore
     (VInt size) <- eMe exprSize
     if size < 0 then throwError (InvalidArraySize size)
     else do
         let (loc, sto') = newloc sto
-        let arrVal = replicate (fromInteger size) (if stype == STInt then VInt 0 else VBool False)
+        let arrVal = replicate (fromInteger size) (if arrType == SimpleInt STInt then VInt 0 else VBool False)
         let rhoV' = mapSet rhoV arr (loc, (False, False))
         controlFlow <- getControlFlow
         put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
@@ -553,9 +529,9 @@ iMD (FuncDef ftype (Ident func) params instr) = do
             (res, _, _) <- local (const (rhoV, rhoF')) (iMI instr)
             case res of
                 Just val -> return (val)
-                Nothing -> case ftype of
-                    FTInt -> return (VInt 0)
-                    FTBool -> return (VBool False)
+                Nothing -> case (evalFuncType ftype) of
+                    FuncInt FTInt -> return (VInt 0)
+                    FuncBool FTBool -> return (VBool False)
     let rhoF' = mapSet rhoF func x
     return (rhoV, rhoF')
 
@@ -617,14 +593,14 @@ eML (Lam ftype params instr) = do
 eMP :: Params -> WorkingMonad [FuncParam]
 
 eMP (ParamsNone) = return []
-eMP (ParamVar stype (Ident var)) = return [PSimple stype (Ident var)]
-eMP (ParamFunc ftype (Ident func)) = return [PFunc ftype (Ident func)]
+eMP (ParamVar stype (Ident var)) = return [PSimple (evalSimpleType stype) (Ident var)]
+eMP (ParamFunc ftype (Ident func)) = return [PFunc (evalFuncType ftype) (Ident func)]
 eMP (ParamVarMany stype (Ident var) params) = do
     rest <- eMP params
-    return ((PSimple stype (Ident var)) : rest)
+    return ((PSimple (evalSimpleType stype) (Ident var)) : rest)
 eMP (ParamFuncMany ftype (Ident func) params) = do
     rest <- eMP params
-    return ((PFunc ftype (Ident func)) : rest)
+    return ((PFunc (evalFuncType ftype) (Ident func)) : rest)
 
 
 -- Parameters
@@ -641,10 +617,10 @@ ParamFuncMany.   Params ::= FType Ident "," Params;
 -}
 
 eP (ParamsNone) = []
-eP (ParamVar stype (Ident var)) = [PSimple stype (Ident var)]
-eP (ParamFunc ftype (Ident func)) = [PFunc ftype (Ident func)]
-eP (ParamVarMany stype (Ident var) params) = (PSimple stype (Ident var)) : eP params
-eP (ParamFuncMany ftype (Ident func) params) = (PFunc ftype (Ident func)) : eP params
+eP (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
+eP (ParamFunc ftype (Ident func)) = [PFunc (evalFuncType ftype) (Ident func)]
+eP (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : eP params
+eP (ParamFuncMany ftype (Ident func) params) = (PFunc (evalFuncType ftype) (Ident func)) : eP params
 
 ------------------------------------------ STATEMENTS ------------------------------------------
 
@@ -710,7 +686,7 @@ iMS (SWhile expr i) = do
 iMS (SFor (Ident var) exprFrom exprTo instr) = do
     (VInt from) <- eMe exprFrom
     (VInt to) <- eMe exprTo
-    (rhoV, rhoF) <- iMD (VarDef STInt (Ident var) (ENum from))
+    (rhoV, rhoF) <- iMD (VarDef (STI STInt) (Ident var) (ENum from))
     local (const (rhoV, rhoF)) $ do
         let x = do
             (VInt val) <- eMe (VarVal (Ident var))
@@ -758,7 +734,7 @@ iMS (VarAssignPlus (Ident var) expr) = do
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (n + m)))
             return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type 
+--        _ -> throwError (TypeMismatch (TSimple STInt) (typeof val)) -- static type checker will catch this
 
 iMS (VarAssignMinus (Ident var) expr) = do
     val <- eMe expr
@@ -767,7 +743,7 @@ iMS (VarAssignMinus (Ident var) expr) = do
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (m - n)))
             return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
+--        _ -> throwError (TypeMismatch SType FType) --static type checker should catch this
 
 iMS (VarAssignMul (Ident var) expr) = do
     val <- eMe expr
@@ -776,7 +752,7 @@ iMS (VarAssignMul (Ident var) expr) = do
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (n * m)))
             return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
+--        _ -> throwError (TypeMismatch SType FType) static type checker should catch this
 
 iMS (VarAssignDiv (Ident var) expr) = do
     val <- eMe expr
@@ -787,7 +763,7 @@ iMS (VarAssignDiv (Ident var) expr) = do
             else do
                 msetVarVal var (SimpleVal (VInt (m `div` n)))
                 return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
+--        _ -> throwError (TypeMismatch SType FType) --static type checker should catch this
 
 iMS (VarAssignMod (Ident var) expr) = do
     val <- eMe expr
@@ -798,7 +774,7 @@ iMS (VarAssignMod (Ident var) expr) = do
             else do
                 msetVarVal var (SimpleVal (VInt (m `mod` n)))
                 return (Nothing)
-        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
+--        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
 
 
 iMS (ArrElSet (Ident arr) exprIndex exprVal) = do
@@ -899,21 +875,7 @@ mcompute s =
             let initialEnv = (rhoV0, rhoFM0)
             let initialState = (sto0, (0, False))
 
-            -- For static type checking:
-            -- let initialEnv = (rhoV0, rhoFM0, TypeCheck)
-            -- let initialState = (sto0, tsto0, (0, False))
---            typeCheckResult <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
---            case typeCheckResult of
---                Left err -> do
---                    putStrLn "\nType checking failed...\n"
---                    putStrLn $ "Error: " ++ show err
---                    exitFailure
---                Right _ -> do
---                    putStrLn "\nType checking successful!\n"
-
-
             result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
-
 
             case result of
                 Left err -> do
@@ -935,3 +897,140 @@ mprocessFile path = do
     content <- readFile path
     let strippedContent = Prelude.filter (/= '\n') content
     mcompute strippedContent
+
+--STInt.  STInt ::= "Int";
+--STBool. STBool ::= "Bool";
+--FTInt. FTInt ::= "IntFunc";
+--FTBool. FTBool ::= "BoolFunc";
+--
+--STI. SimpleType ::= STInt;
+--STB. SimpleType ::= STBool;
+--FTI. FuncType ::= FTInt;
+--FTB. FuncType ::= FTBool;
+evalSimpleType :: SimpleType -> SType
+evalSimpleType (STI STInt) = SimpleInt STInt
+evalSimpleType (STB STBool) = SimpleBool STBool
+
+evalFuncType :: FuncType -> FType
+evalFuncType (FTI FTInt) = FuncInt FTInt
+evalFuncType (FTB FTBool) = FuncBool FTBool
+
+------------------------------------------ TYPE CHECKING -------------------------------------------
+-- Static type checker
+
+data SType = SimpleInt STInt | SimpleBool STBool deriving (Show, Eq)
+data FType = FuncInt FTInt | FuncBool FTBool deriving (Show, Eq)
+
+-- SType and FType are types from Frajer.cf.
+data Type = TSimple SType | TFunc FType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
+
+-- Complex types (arrays and dictionaries)
+data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
+
+data FuncParam = PSimple SType Ident | PFunc FType Ident deriving (Show, Eq)
+
+-- Function types (can take functions as arguments, but return only simple types)
+data DetailedFuncType = DetFunc [FuncParam] SType deriving (Show, Eq)
+
+typeof :: SimpleValue -> Type
+typeof (VInt _) = TSimple (SimpleInt STInt)
+typeof (VBool _) = TSimple (SimpleBool STBool)
+
+type TVEnv = Map Var Loc -- the same as VEnv, but for clarity called TEnv
+type TFEnv = Map Var DetailedFuncType
+-- A flag to detect whether we are in a loop and break/continue should be allowed
+type LoopFlag = Bool
+data TypeStore = TStore {typeMap :: Map Loc Type, nextTypeLoc :: Loc} deriving Show
+
+tnewloc:: TypeStore -> (Loc, TypeStore)
+tnewloc (TStore map loc) = (loc, TStore map (loc + 1))
+
+tsetVarLoc:: TVEnv -> Var -> Loc -> TVEnv
+tsetVarLoc trhoV var loc = mapSet trhoV var loc
+
+------------------------------------------ MONAD -------------------------------------------------
+--newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
+-- Now our monad for working with types
+newtype TypeMonad a = TypeMonad { runTypeMonad :: ExceptT Error (ReaderT (TVEnv, TFEnv) (StateT (TypeStore, LoopFlag) IO)) a }
+
+instance MonadState (TypeStore, LoopFlag) TypeMonad where
+    get = TypeMonad $ lift get
+    put = TypeMonad . lift . put
+
+instance MonadError Error TypeMonad where
+    throwError = TypeMonad . throwError
+    catchError (TypeMonad action) handler =
+        TypeMonad $ catchError action (runTypeMonad . handler)
+
+instance MonadReader (TVEnv, TFEnv) TypeMonad where
+    ask = TypeMonad ask
+    local f (TypeMonad action) = TypeMonad $ local f action
+
+instance Functor TypeMonad where
+    fmap = liftM
+
+instance Applicative TypeMonad where
+    pure = return
+    (<*>) = ap
+
+instance Monad TypeMonad where
+    return = TypeMonad . return
+    (TypeMonad action) >>= f = TypeMonad (action >>= runTypeMonad . f)
+
+instance MonadIO TypeMonad where
+    liftIO = TypeMonad . liftIO
+
+instance MonadFail TypeMonad where
+    fail msg = throwError (CustomError (msg))
+
+
+------------------------------------------ HELPER FUNCTIONS ---------------------------------------
+
+getTStore :: TypeMonad TypeStore
+getTStore = TypeMonad $ do
+    (tsto, _) <- get
+    return tsto
+
+putTStore :: TypeStore -> TypeMonad ()
+putTStore tsto = do
+    (_, loopFlag) <- get
+    put (tsto, loopFlag)
+
+getLoopFlag :: TypeMonad LoopFlag
+getLoopFlag = TypeMonad $ do
+    (_, loopFlag) <- get
+    return loopFlag
+
+putLoopFlag :: LoopFlag -> TypeMonad ()
+putLoopFlag loopFlag = do
+    (tsto, _) <- get
+    put (tsto, loopFlag)
+
+getVarType :: Var -> TypeMonad Type
+getVarType var = do
+    (trhoV, _) <- ask
+    tsto <- getTStore
+    case Data.Map.lookup var trhoV of
+        Just loc -> case Data.Map.lookup loc (typeMap tsto) of
+            Just t -> return t
+            Nothing -> throwError (VariableNotDefined (Ident var))
+        Nothing -> throwError (VariableNotDefined (Ident var))
+
+setVarType :: Var -> Type -> TypeMonad ()
+setVarType var t = do
+    (trhoV, _) <- ask
+    tsto <- getTStore
+    case Data.Map.lookup var trhoV of
+        Just loc -> do
+            let tsto' = tsto {typeMap = mapSet (typeMap tsto) loc t}
+            putTStore tsto'
+        Nothing -> throwError (VariableNotDefined (Ident var))
+
+
+-------------------------------------- EXPRESSIONS ------------------------------------------------
+-- Now type checking functions, similarly to semantic functions, we create separate ones
+-- for different syntactic categories
+
+checkExpr :: Expr -> TypeMonad Type
+
+checkExpr (ENum _) = return (TSimple (SimpleInt STInt))

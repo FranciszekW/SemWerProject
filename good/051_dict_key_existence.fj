@@ -1,0 +1,4 @@
+Dict Int a;
+a set [2] to (4);
+print (a has key [2]);
+print (a has key [3]);

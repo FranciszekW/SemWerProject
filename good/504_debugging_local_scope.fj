@@ -1,0 +1,6 @@
+Int x = 1;
+for(i = 1 to 3) {
+    debug reading enable x;
+    print(x + i);
+};
+print(x)

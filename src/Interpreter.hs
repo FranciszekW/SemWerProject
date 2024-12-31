@@ -1,6 +1,6 @@
 -- TODOS:
--- > Static type checking
 -- > Remove unsafePrint from setVarVal and getVarVal
+-- > Move static type checker to a separate file
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

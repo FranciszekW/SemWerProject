@@ -1,6 +1,6 @@
 -- TODOS:
 -- > Static type checking
--- > Change syntax so that function as a parameter must also have its parameters specified
+-- > Remove unsafePrint from setVarVal and getVarVal
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -236,6 +236,7 @@ mgetVarVal var = do
             else do
                 return val
         Nothing -> throwError (VariableNotDefined (Ident var))
+
 
 -- not monadic:
 
@@ -576,6 +577,13 @@ eMa (ArgsLambdaMany lambda args) = do
     f <- eML lambda
     fs <- eMa args
     return (FArg f : fs)
+eMa (ArgsFunc func) = do
+    f <- mgetfunc func
+    return [FArg f]
+eMa (ArgsFuncMany func args) = do
+    f <- mgetfunc func
+    fs <- eMa args
+    return (FArg f : fs)
 
 eML :: Lambda -> WorkingMonad MFunc
 
@@ -591,17 +599,24 @@ eML (Lam ftype params instr) = do
                 Nothing -> return (VInt 0)
     return x
 
-eMP :: Params -> WorkingMonad [FuncParam]
-
-eMP (ParamsNone) = return []
-eMP (ParamVar stype (Ident var)) = return [PSimple (evalSimpleType stype) (Ident var)]
-eMP (ParamFunc ftype (Ident func)) = return [PFunc (evalFuncType ftype) (Ident func)]
-eMP (ParamVarMany stype (Ident var) params) = do
-    rest <- eMP params
-    return ((PSimple (evalSimpleType stype) (Ident var)) : rest)
-eMP (ParamFuncMany ftype (Ident func) params) = do
-    rest <- eMP params
-    return ((PFunc (evalFuncType ftype) (Ident func)) : rest)
+--eMP :: Params -> WorkingMonad [FuncParam]
+--
+--eMP (ParamsNone) = return []
+--eMP (ParamVar stype (Ident var)) = return [PSimple (evalSimpleType stype) (Ident var)]
+--eMP (ParamVarMany stype (Ident var) params) = do
+--    rest <- eMP params
+--    return ((PSimple (evalSimpleType stype) (Ident var)) : rest)
+--eMP (ParamFunc ftype params (Ident func)) = do
+--    funcParams <- eMP params
+--    paramTypes <- evalParamTypes funcParams
+--    returnType <- evalFuncReturnType ftype
+--    return [PFunc (DetFunc paramTypes returnType) (Ident func)]
+--eMP (ParamFuncMany ftype params (Ident func) paramsMany) = do
+--    funcParams <- eMP params
+--    paramTypes <- evalParamTypes funcParams
+--    rest <- eMP paramsMany
+--    returnType <- evalFuncReturnType ftype
+--    return ((PFunc (DetFunc paramTypes returnType) (Ident func)) : rest)
 
 
 -- Parameters
@@ -619,9 +634,16 @@ ParamFuncMany.   Params ::= FType Ident "," Params;
 
 eP (ParamsNone) = []
 eP (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
-eP (ParamFunc ftype (Ident func)) = [PFunc (evalFuncType ftype) (Ident func)]
 eP (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : eP params
-eP (ParamFuncMany ftype (Ident func) params) = (PFunc (evalFuncType ftype) (Ident func)) : eP params
+eP (ParamFunc ftype params (Ident func)) =
+    let funcParams = eP params in
+    let paramTypes = evalParamTypes funcParams in
+    [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)]
+eP (ParamFuncMany ftype params (Ident func) paramsMany) =
+    let funcParams = eP params in
+    let paramTypes = evalParamTypes funcParams in
+    let rest = eP paramsMany in
+    [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)] ++ rest
 
 ------------------------------------------ STATEMENTS ------------------------------------------
 
@@ -899,26 +921,6 @@ mprocessFile path = do
     let strippedContent = Prelude.filter (/= '\n') content
     mcompute strippedContent
 
---STInt.  STInt ::= "Int";
---STBool. STBool ::= "Bool";
---FTInt. FTInt ::= "IntFunc";
---FTBool. FTBool ::= "BoolFunc";
---
---STI. SimpleType ::= STInt;
---STB. SimpleType ::= STBool;
---FTI. FuncType ::= FTInt;
---FTB. FuncType ::= FTBool;
-evalSimpleType :: SimpleType -> SType
-evalSimpleType (STI STInt) = SimpleInt STInt
-evalSimpleType (STB STBool) = SimpleBool STBool
-
-evalFuncType :: FuncType -> FType
-evalFuncType (FTI FTInt) = FuncInt FTInt
-evalFuncType (FTB FTBool) = FuncBool FTBool
-
-evalFuncReturnType :: FuncType -> SType
-evalFuncReturnType (FTI FTInt) = SimpleInt STInt
-evalFuncReturnType (FTB FTBool) = SimpleBool STBool
 
 ------------------------------------------ TYPE CHECKING -------------------------------------------
 --data Error =  DivByZero
@@ -946,7 +948,7 @@ data Type = TSimple SType | TFunc FType | TComplex ComplexType | TFunction Detai
 -- Complex types (arrays and dictionaries)
 data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
 
-data FuncParam = PSimple SType Ident | PFunc FType Ident deriving (Show, Eq)
+data FuncParam = PSimple SType Ident | PFunc DetailedFuncType Ident deriving (Show, Eq)
 
 -- Function types (can take functions as arguments, but return only simple types)
 data DetailedFuncType = DetFunc [Type] SType deriving (Show, Eq)
@@ -965,7 +967,36 @@ tnewloc:: TypeStore -> (Loc, TypeStore)
 tnewloc (TStore map loc) = (loc, TStore map (loc + 1))
 
 tsetVarLoc:: TVEnv -> Var -> Loc -> TVEnv
-tsetVarLoc trhoV var loc = mapSet trhoV var loc
+tsetVarLoc rhoVT var loc = mapSet rhoVT var loc
+
+------------------------------------HELPER FUNCTIONS------------------------------------------------
+--STInt.  STInt ::= "Int";
+--STBool. STBool ::= "Bool";
+--FTInt. FTInt ::= "IntFunc";
+--FTBool. FTBool ::= "BoolFunc";
+--
+--STI. SimpleType ::= STInt;
+--STB. SimpleType ::= STBool;
+--FTI. FuncType ::= FTInt;
+--FTB. FuncType ::= FTBool;
+evalSimpleType :: SimpleType -> SType
+evalSimpleType (STI STInt) = SimpleInt STInt
+evalSimpleType (STB STBool) = SimpleBool STBool
+
+evalFuncType :: FuncType -> FType
+evalFuncType (FTI FTInt) = FuncInt FTInt
+evalFuncType (FTB FTBool) = FuncBool FTBool
+
+evalFuncReturnType :: FuncType -> SType
+evalFuncReturnType (FTI FTInt) = SimpleInt STInt
+evalFuncReturnType (FTB FTBool) = SimpleBool STBool
+
+evalParamTypes :: [FuncParam] -> [Type]
+evalParamTypes [] = []
+evalParamTypes (PSimple stype (Ident var) : rest) =
+    TSimple (stype) : evalParamTypes rest
+evalParamTypes (PFunc (DetFunc paramTypes retType) (Ident func) : rest) =
+    TFunction (DetFunc paramTypes retType) : evalParamTypes rest
 
 ------------------------------------------ MONAD -------------------------------------------------
 --newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
@@ -1027,9 +1058,9 @@ putLoopFlag loopFlag = do
 
 getVarType :: Var -> TypeMonad Type
 getVarType var = do
-    (trhoV, _) <- ask
+    (rhoVT, _) <- ask
     tsto <- getTStore
-    case Data.Map.lookup var trhoV of
+    case Data.Map.lookup var rhoVT of
         Just loc -> case Data.Map.lookup loc (typeMap tsto) of
             Just t -> return t
             Nothing -> throwError (VariableNotDefined (Ident var))
@@ -1037,9 +1068,9 @@ getVarType var = do
 
 setVarType :: Var -> Type -> TypeMonad ()
 setVarType var t = do
-    (trhoV, _) <- ask
+    (rhoVT, _) <- ask
     tsto <- getTStore
-    case Data.Map.lookup var trhoV of
+    case Data.Map.lookup var rhoVT of
         Just loc -> do
             let tsto' = tsto {typeMap = mapSet (typeMap tsto) loc t}
             putTStore tsto'
@@ -1047,16 +1078,16 @@ setVarType var t = do
 
 getFuncType :: Var -> TypeMonad Type
 getFuncType var = do
-    (_, tfenv) <- ask
-    case Data.Map.lookup var tfenv of
+    (_, rhoFT) <- ask
+    case Data.Map.lookup var rhoFT of
         Just t -> return (TFunction t)
         Nothing -> throwError (FunctionNotInScope (Ident var))
 
 setFuncType :: Var -> DetailedFuncType -> TypeMonad TFEnv
 setFuncType var t = do
-    (trhoV, tfenv) <- ask
-    let tfenv' = mapSet tfenv var t
-    return tfenv'
+    (rhoVT, rhoFT) <- ask
+    let rhoFT' = mapSet rhoFT var t
+    return rhoFT'
 
 
 -------------------------------------- EXPRESSIONS ------------------------------------------------
@@ -1222,22 +1253,51 @@ checkLambda :: Lambda -> TypeMonad Type
 
 checkLambda (Lam ftype params instr) = do
     let paramList = eP params
-    paramTypes <- checkParams paramList
+    let paramTypes = evalParamTypes paramList
     let retType = evalFuncReturnType ftype
     let funcType = DetFunc paramTypes retType
     return (TFunction funcType)
 
-
-checkParams :: [FuncParam] -> TypeMonad [Type]
-checkParams [] = return []
-
-checkParams (PSimple stype (Ident var) : rest) = do
-    ts <- checkParams rest
-    return (TSimple stype : ts)
-
--- TODO: Change syntax so that function as a parameter must also have its parameters specified
-checkParams (PFunc ftype (Ident var) : rest) = do
-    ts <- checkParams rest
-    return (TFunc ftype : ts)
-
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
+
+checkInstr :: Instr -> TypeMonad (Maybe Type, TVEnv, TFEnv)
+
+-- In the sequence of instructions, we need to check type of the first one, update the
+-- environment (the first instruction could define a variable). It's a bit different from
+-- the semantic function, here we need to check types of both instructions, even if the first
+-- one returns a value.
+checkInstr (ISeq i0 i1) = do
+    (res0, rhoVT0, rhoFT0) <- checkInstr i0
+    local (const (rhoVT0, rhoFT0)) $ do
+        (res1, rhoVT1, rhoFT1) <- checkInstr i1
+        return (res1, rhoVT1, rhoFT1)
+
+checkInstr (IDef def) = do
+    (rhoVT, rhoFT) <- checkDef def
+    return (Nothing, rhoVT, rhoFT)
+
+checkInstr (IStmt stmt) = do
+    res <- checkStmt stmt
+    (rhoVT, rhoFT) <- ask
+    return (res, rhoVT, rhoFT)
+
+checkInstr (ISpecStmt specStmt) = do
+    (rhoVT, rhoFT) <- checkSpecStmt specStmt
+    return (Nothing, rhoVT, rhoFT)
+
+------------------------------------------ DEFINITIONS ------------------------------------------
+
+checkDef :: Def -> TypeMonad (TVEnv, TFEnv)
+
+checkDef (VarDef stype (Ident var) expr) = do
+    t <- checkExpr expr
+    case t of
+        TSimple st -> if st == evalSimpleType stype then do
+            (rhoVT, rhoFT) <- ask
+            tsto <- getTStore
+            let (loc, tsto') = tnewloc tsto
+            let rhoVT' = mapSet rhoVT var loc
+            putTStore tsto'
+            setVarType var t
+            return (rhoVT', rhoFT)
+        else throwError (TypeMismatch (TSimple (evalSimpleType stype)) t)

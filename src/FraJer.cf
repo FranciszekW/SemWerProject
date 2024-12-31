@@ -94,22 +94,24 @@ BDictHasKey.  Expr2 ::= Ident "has" "key" "[" Expr "]";
 -- --------------------------------------------------------------------------------------------- --
 
 -- BNFC expressions that define the part of the grammar for parameters and arguments
--- args ::= void | e | e, args | Lambda | Lambda, args
+-- args ::= void | e | e, args | Lambda | Lambda, args | f, args | f
 -- Lambda ::= FuncType "lambda" (params) "->" { Instr }
--- params ::= none | type x | ftype f
---                 | type x, params | ftype f , params
+-- params ::= none | type x | ftype (params) f
+--                 | type x, params | ftype (params) f , params
 
 ArgsVoid. Args ::= "void";
 ArgsOne.  Args ::= Expr;
 ArgsMany. Args ::= Expr "," Args;
 ArgsLambda. Args ::= Lambda;
 ArgsLambdaMany. Args ::= Lambda "," Args;
+ArgsFunc. Args ::= "func" Ident;
+ArgsFuncMany. Args ::= "func" Ident "," Args;
 
 ParamsNone.      Params ::= "none";
 ParamVar.        Params ::= SimpleType Ident;
-ParamFunc.       Params ::= FuncType Ident;
+ParamFunc.       Params ::= FuncType "(" Params ")" Ident;
 ParamVarMany.    Params ::= SimpleType Ident "," Params;
-ParamFuncMany.   Params ::= FuncType Ident "," Params;
+ParamFuncMany.   Params ::= FuncType "(" Params ")" Ident "," Params;
 
 Lam. Lambda ::= FuncType "lambda" "(" Params ")" "->" "{" Instr "}";
 

@@ -1,5 +1,7 @@
 Parse Successful!
 
+Type Check Successful!
+
 VInt 3
 Writing: "x" = SimpleVal (VInt 4)
 Writing: "x" = SimpleVal (VInt 6)

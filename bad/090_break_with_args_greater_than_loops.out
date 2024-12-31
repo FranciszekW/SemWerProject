@@ -1,9 +1,3 @@
 Parse Successful!
 
-VInt 1
-VInt 2
-VInt 3
-VInt 4
-Computation Successful!
-
-Program returned without a value.
+Type Check Failed...

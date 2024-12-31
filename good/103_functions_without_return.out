@@ -1,27 +1,3 @@
 Parse Successful!
 
-VInt 9
-VInt 8
-VInt 7
-VInt 6
-VInt 5
-VInt 4
-VInt 3
-VInt 2
-VInt 1
-VInt 0
-VInt 0
-VInt 11
-VInt 12
-VInt 13
-VInt 14
-VInt 15
-VInt 16
-VInt 17
-VInt 18
-VInt 19
-VInt 20
-VBool False
-Computation Successful!
-
-Program returned without a value.
+Type Check Failed...

@@ -1,1 +1,1 @@
-Error: Type mismatch: SType and TComplex (TArray STInt)
+Error: Invalid print argument type: TComplex (TArray (SimpleInt STInt))

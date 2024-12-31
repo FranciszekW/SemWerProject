@@ -1,1 +1,1 @@
-Error: Type mismatch: SType and TComplex (TArray STInt)
+Error: Type mismatch: TSimple (SimpleInt STInt) and TComplex (TArray (SimpleInt STInt))

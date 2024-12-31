@@ -1,9 +1,3 @@
 Parse Successful!
 
-VInt 120
-VInt 40
-VInt 20
-VInt 6
-VInt 3
-Computation Successful!
-Program returned with value: VInt 1
+Type Check Failed...

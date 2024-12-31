@@ -1,1 +1,1 @@
-Error: Variable f not defined
+Error: Type mismatch: TSimple (SimpleBool STBool) and TSimple (SimpleInt STInt)

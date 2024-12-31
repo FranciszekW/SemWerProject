@@ -1,1 +1,1 @@
-Error: Type mismatch: SType and SType
+Error: Type mismatch: TSimple (SimpleInt STInt) and TSimple (SimpleBool STBool)

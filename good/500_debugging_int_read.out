@@ -1,5 +1,7 @@
 Parse Successful!
 
+Type Check Successful!
+
 Reading: "x" = SimpleVal (VInt 3)
 VInt 3
 Reading: "x" = SimpleVal (VInt 3)

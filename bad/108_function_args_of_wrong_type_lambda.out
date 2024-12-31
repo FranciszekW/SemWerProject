@@ -1,4 +1,3 @@
-Parse Successful!
+Parse Failed...
 
-Computation Successful!
-Program returned with value: VBool False
+syntax error at line 1, column 19 before `g'

@@ -1,2 +1,1 @@
-Error: interpreter: src/Interpreter.hs:(104,5)-(113,80): Non-exhaustive patterns in function show
-
+Error: Type mismatch: TSimple (SimpleInt STInt) and TSimple (SimpleBool STBool)

@@ -1064,6 +1064,9 @@ putTStore tsto = do
     (_, loopFlag) <- get
     put (tsto, loopFlag)
 
+setLocType :: TypeStore -> Loc -> Type -> TypeStore
+setLocType tsto loc t = tsto {typeMap = mapSet (typeMap tsto) loc t}
+
 getLoopFlag :: TypeMonad LoopFlag
 getLoopFlag = TypeMonad $ do
     (_, loopFlag) <- get
@@ -1332,8 +1335,8 @@ checkDef (VarDef stype (Ident var) expr) = do
             tsto <- getTStore
             let (loc, tsto') = tnewloc tsto
             let rhoVT' = mapSet rhoVT var loc
-            putTStore tsto'
-            setVarType var t
+            let tsto'' = setLocType tsto' loc t
+            putTStore tsto''
             return (rhoVT', rhoFT)
         else throwError (TypeMismatch (TSimple (evalSimpleType stype)) t)
 
@@ -1348,8 +1351,8 @@ checkDef (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
                     tsto <- getTStore
                     let (loc, tsto') = tnewloc tsto
                     let rhoVT' = mapSet rhoVT arr loc
-                    putTStore tsto'
-                    setVarType arr (TComplex (TArray st))
+                    let tsto'' = setLocType tsto' loc (TComplex (TArray st))
+                    putTStore tsto''
                     return (rhoVT', rhoFT)
                 else throwError (TypeMismatch (TSimple (evalSimpleType stype)) t')
         _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
@@ -1362,8 +1365,8 @@ checkDef (ArrDef stype (Ident arr) exprSize) = do
             tsto <- getTStore
             let (loc, tsto') = tnewloc tsto
             let rhoVT' = mapSet rhoVT arr loc
-            putTStore tsto'
-            setVarType arr (TComplex (TArray (evalSimpleType stype)))
+            let tsto'' = setLocType tsto' loc (TComplex (TArray (evalSimpleType stype)))
+            putTStore tsto''
             return (rhoVT', rhoFT)
         _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
 
@@ -1372,23 +1375,44 @@ checkDef (DictDef stype (Ident dict)) = do
     tsto <- getTStore
     let (loc, tsto') = tnewloc tsto
     let rhoVT' = mapSet rhoVT dict loc
-    putTStore tsto'
-    setVarType dict (TComplex (TDict (evalSimpleType stype)))
+    let tsto'' = setLocType tsto' loc (TComplex (TDict (evalSimpleType stype)))
+    putTStore tsto''
     return (rhoVT', rhoFT)
 
 -- In functions, we check all possible return types from the instructions
--- and compare them with the function return type.
+-- and compare them with the function return type. We also need to update the environments
+-- based on the function parameters.
 checkDef (FuncDef ftype (Ident func) params instr) = do
-    (rhoVT, rhoFT) <- ask
     let paramList = eP params
-    let paramTypes = evalParamTypes paramList
-    let retType = evalFuncReturnType ftype
-    let funcType = DetFunc paramTypes retType
-    let rhoFT' = mapSet rhoFT func funcType -- recursion is allowed
+    (rhoVT, rhoFT) <- prepareParamEnv paramList
+    let funcType = DetFunc (evalParamTypes paramList) (evalFuncReturnType ftype)
+    rhoFT' <- setFuncType func funcType
     local (const (rhoVT, rhoFT')) $ do
-        (res, _, _) <- checkInstr instr
-        checkAllTypesEqual res (TSimple retType)
-        return (rhoVT, rhoFT')
+        (res, rhoVT', rhoFT'') <- checkInstr instr
+        let retTypes = res
+        let retType = evalFuncReturnType ftype
+        checkAllTypesEqual retTypes (TSimple retType)
+        return (rhoVT', rhoFT'')
+
+
+prepareParamEnv :: [FuncParam] -> TypeMonad (TVEnv, TFEnv)
+prepareParamEnv [] = do
+    (rhoVT, rhoFT) <- ask
+    return (rhoVT, rhoFT)
+
+prepareParamEnv (PSimple stype (Ident var) : rest) = do
+    (rhoVT, rhoFT) <- prepareParamEnv rest
+    tsto <- getTStore
+    let (loc, tsto') = tnewloc tsto
+    let rhoVT' = mapSet rhoVT var loc
+    let tsto'' = setLocType tsto' loc (TSimple stype)
+    putTStore tsto''
+    return (rhoVT', rhoFT)
+
+prepareParamEnv (PFunc (DetFunc paramTypes retType) (Ident func) : rest) = do
+    (rhoVT, rhoFT) <- prepareParamEnv rest
+    let rhoFT' = mapSet rhoFT func (DetFunc paramTypes retType)
+    return (rhoVT, rhoFT')
 
 ------------------------------------------ STATEMENTS -------------------------------------------
 -- In statements, we also hold the list of possible return types, i.e. if we have the if statement

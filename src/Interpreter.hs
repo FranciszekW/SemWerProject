@@ -83,6 +83,9 @@ data Error =  DivByZero
             | BreakUsageOutsideLoop
             | ContinueUsageOutsideLoop
             | NotASimpleValue Ident
+            | InvalidPrintArgType Type
+            | InvalidSwapArgType Type
+            | InvalidDebugArgType Type
             | CustomError String
 
 instance Show Error where
@@ -99,6 +102,9 @@ instance Show Error where
     show BreakUsageOutsideLoop = "Break used outside of loop"
     show ContinueUsageOutsideLoop = "Continue used outside of loop"
     show (NotASimpleValue (Ident var)) = "Variable " ++ var ++ " is not a simple value"
+    show (InvalidPrintArgType t) = "Invalid print argument type: " ++ show t
+    show (InvalidSwapArgType t) = "Invalid swap argument type: " ++ show t
+    show (InvalidDebugArgType t) = "Invalid debug argument type: " ++ show t
 
 ------------------------------------------ ENVIRONMENTS -------------------------------------------
 
@@ -531,9 +537,9 @@ iMD (FuncDef ftype (Ident func) params instr) = do
             (res, _, _) <- local (const (rhoV, rhoF')) (iMI instr)
             case res of
                 Just val -> return (val)
-                Nothing -> case (evalFuncType ftype) of
-                    FuncInt FTInt -> return (VInt 0)
-                    FuncBool FTBool -> return (VBool False)
+                Nothing -> case (evalFuncReturnType ftype) of
+                    SimpleInt STInt -> return (VInt 0)
+                    SimpleBool STBool -> return (VBool False)
     let rhoF' = mapSet rhoF func x
     return (rhoV, rhoF')
 
@@ -881,6 +887,12 @@ rhoV0 = fromList []
 sto0:: Store
 sto0 = CStore empty 0
 
+rhoFT0:: TFEnv
+rhoFT0 = fromList []
+
+rhoVT0:: TVEnv
+rhoVT0 = fromList []
+
 tsto0:: TypeStore
 tsto0 = TStore empty 0
 
@@ -895,24 +907,36 @@ mcompute s =
         Right e -> do
             putStrLn "Parse Successful!\n"
 
-            let initialEnv = (rhoV0, rhoFM0)
-            let initialState = (sto0, (0, False))
+            let typeCheckEnv = (rhoVT0, rhoFT0)
+            let typeCheckState = (tsto0, False)
 
-            result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
+            typeCheckResult <- evalStateT (runReaderT (runExceptT (runTypeMonad (checkInstr e))) typeCheckEnv) typeCheckState
 
-            case result of
+            case typeCheckResult of
                 Left err -> do
-                    putStrLn "Computation Failed..." >> hFlush stdout
+                    putStrLn "Type Check Failed..." >> hFlush stdout
                     hPutStrLn stderr $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
                     exitFailure
-                Right res -> do
-                    case res of
-                        (Just val, _, _) -> do
-                            putStrLn "Computation Successful!" >> hFlush stdout
-                            putStrLn $ "Program returned with value: " ++ show val
-                        (Nothing, _, _) -> do
-                            putStrLn "Computation Successful!\n" >> hFlush stdout
-                            putStrLn "Program returned without a value."
+                Right _ -> do
+                    putStrLn "Type Check Successful!\n" >> hFlush stdout
+                    let initialEnv = (rhoV0, rhoFM0)
+                    let initialState = (sto0, (0, False))
+
+                    result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
+
+                    case result of
+                        Left err -> do
+                            putStrLn "Computation Failed..." >> hFlush stdout
+                            hPutStrLn stderr $ "Error: " ++ show err  -- Błąd wykonania (z `Left err`)
+                            exitFailure
+                        Right res -> do
+                            case res of
+                                (Just val, _, _) -> do
+                                    putStrLn "Computation Successful!" >> hFlush stdout
+                                    putStrLn $ "Program returned with value: " ++ show val
+                                (Nothing, _, _) -> do
+                                    putStrLn "Computation Successful!\n" >> hFlush stdout
+                                    putStrLn "Program returned without a value."
 
 
 mprocessFile :: FilePath -> IO ()
@@ -940,10 +964,10 @@ mprocessFile path = do
 -- Static type checker
 
 data SType = SimpleInt STInt | SimpleBool STBool deriving (Show, Eq)
-data FType = FuncInt FTInt | FuncBool FTBool deriving (Show, Eq)
+--data FType = FuncInt FTInt | FuncBool FTBool deriving (Show, Eq)
 
 -- SType and FType are types from Frajer.cf.
-data Type = TSimple SType | TFunc FType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
+data Type = TSimple SType | TComplex ComplexType | TFunction DetailedFuncType deriving (Show, Eq)
 
 -- Complex types (arrays and dictionaries)
 data ComplexType = TArray SType | TDict SType deriving (Show, Eq)
@@ -963,13 +987,11 @@ type TFEnv = Map Var DetailedFuncType
 type LoopFlag = Bool
 data TypeStore = TStore {typeMap :: Map Loc Type, nextTypeLoc :: Loc} deriving Show
 
+------------------------------------HELPER FUNCTIONS------------------------------------------------
+
 tnewloc:: TypeStore -> (Loc, TypeStore)
 tnewloc (TStore map loc) = (loc, TStore map (loc + 1))
 
-tsetVarLoc:: TVEnv -> Var -> Loc -> TVEnv
-tsetVarLoc rhoVT var loc = mapSet rhoVT var loc
-
-------------------------------------HELPER FUNCTIONS------------------------------------------------
 --STInt.  STInt ::= "Int";
 --STBool. STBool ::= "Bool";
 --FTInt. FTInt ::= "IntFunc";
@@ -982,10 +1004,6 @@ tsetVarLoc rhoVT var loc = mapSet rhoVT var loc
 evalSimpleType :: SimpleType -> SType
 evalSimpleType (STI STInt) = SimpleInt STInt
 evalSimpleType (STB STBool) = SimpleBool STBool
-
-evalFuncType :: FuncType -> FType
-evalFuncType (FTI FTInt) = FuncInt FTInt
-evalFuncType (FTB FTBool) = FuncBool FTBool
 
 evalFuncReturnType :: FuncType -> SType
 evalFuncReturnType (FTI FTInt) = SimpleInt STInt
@@ -1056,14 +1074,23 @@ putLoopFlag loopFlag = do
     (tsto, _) <- get
     put (tsto, loopFlag)
 
+tsetVarLoc :: TVEnv -> Var -> Loc -> TVEnv
+tsetVarLoc rho var loc = mapSet rho var loc
+
+getVarLoc :: Var -> TypeMonad Loc
+getVarLoc var = do
+    (rhoVT, _) <- ask
+    case Data.Map.lookup var rhoVT of
+        Just loc -> return loc
+        Nothing -> throwError (VariableNotDefined (Ident var))
+
 getVarType :: Var -> TypeMonad Type
 getVarType var = do
     (rhoVT, _) <- ask
     tsto <- getTStore
-    case Data.Map.lookup var rhoVT of
-        Just loc -> case Data.Map.lookup loc (typeMap tsto) of
-            Just t -> return t
-            Nothing -> throwError (VariableNotDefined (Ident var))
+    loc <- getVarLoc var
+    case Data.Map.lookup loc (typeMap tsto) of
+        Just t -> return t
         Nothing -> throwError (VariableNotDefined (Ident var))
 
 setVarType :: Var -> Type -> TypeMonad ()
@@ -1089,6 +1116,11 @@ setFuncType var t = do
     let rhoFT' = mapSet rhoFT var t
     return rhoFT'
 
+checkAllTypesEqual :: [Type] -> Type -> TypeMonad ()
+checkAllTypesEqual [] _ = return ()
+checkAllTypesEqual (t:ts) t' = do
+    if t == t' then checkAllTypesEqual ts t'
+    else throwError (TypeMismatch t' t)
 
 -------------------------------------- EXPRESSIONS ------------------------------------------------
 -- Now type checking functions, similarly to semantic functions, we create separate ones
@@ -1259,8 +1291,11 @@ checkLambda (Lam ftype params instr) = do
     return (TFunction funcType)
 
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
-
-checkInstr :: Instr -> TypeMonad (Maybe Type, TVEnv, TFEnv)
+-- We will return the list of types and this represents all the possible types returned
+-- by the sequence of instructions. That is necessary for the type checker to keep track
+-- of all possible types that can be returned by a function and check if they are consistent
+-- and equal to the declared return type.
+checkInstr :: Instr -> TypeMonad ([Type], TVEnv, TFEnv)
 
 -- In the sequence of instructions, we need to check type of the first one, update the
 -- environment (the first instruction could define a variable). It's a bit different from
@@ -1270,11 +1305,11 @@ checkInstr (ISeq i0 i1) = do
     (res0, rhoVT0, rhoFT0) <- checkInstr i0
     local (const (rhoVT0, rhoFT0)) $ do
         (res1, rhoVT1, rhoFT1) <- checkInstr i1
-        return (res1, rhoVT1, rhoFT1)
+        return (res0 ++ res1, rhoVT1, rhoFT1)
 
 checkInstr (IDef def) = do
     (rhoVT, rhoFT) <- checkDef def
-    return (Nothing, rhoVT, rhoFT)
+    return ([], rhoVT, rhoFT)
 
 checkInstr (IStmt stmt) = do
     res <- checkStmt stmt
@@ -1283,7 +1318,7 @@ checkInstr (IStmt stmt) = do
 
 checkInstr (ISpecStmt specStmt) = do
     (rhoVT, rhoFT) <- checkSpecStmt specStmt
-    return (Nothing, rhoVT, rhoFT)
+    return ([], rhoVT, rhoFT)
 
 ------------------------------------------ DEFINITIONS ------------------------------------------
 
@@ -1301,3 +1336,246 @@ checkDef (VarDef stype (Ident var) expr) = do
             setVarType var t
             return (rhoVT', rhoFT)
         else throwError (TypeMismatch (TSimple (evalSimpleType stype)) t)
+
+checkDef (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
+    t <- checkExpr exprSize
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            t' <- checkExpr exprInitVal
+            case t' of
+                TSimple st -> if st == evalSimpleType stype then do
+                    (rhoVT, rhoFT) <- ask
+                    tsto <- getTStore
+                    let (loc, tsto') = tnewloc tsto
+                    let rhoVT' = mapSet rhoVT arr loc
+                    putTStore tsto'
+                    setVarType arr (TComplex (TArray st))
+                    return (rhoVT', rhoFT)
+                else throwError (TypeMismatch (TSimple (evalSimpleType stype)) t')
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkDef (ArrDef stype (Ident arr) exprSize) = do
+    t <- checkExpr exprSize
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            (rhoVT, rhoFT) <- ask
+            tsto <- getTStore
+            let (loc, tsto') = tnewloc tsto
+            let rhoVT' = mapSet rhoVT arr loc
+            putTStore tsto'
+            setVarType arr (TComplex (TArray (evalSimpleType stype)))
+            return (rhoVT', rhoFT)
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkDef (DictDef stype (Ident dict)) = do
+    (rhoVT, rhoFT) <- ask
+    tsto <- getTStore
+    let (loc, tsto') = tnewloc tsto
+    let rhoVT' = mapSet rhoVT dict loc
+    putTStore tsto'
+    setVarType dict (TComplex (TDict (evalSimpleType stype)))
+    return (rhoVT', rhoFT)
+
+-- In functions, we check all possible return types from the instructions
+-- and compare them with the function return type.
+checkDef (FuncDef ftype (Ident func) params instr) = do
+    (rhoVT, rhoFT) <- ask
+    let paramList = eP params
+    let paramTypes = evalParamTypes paramList
+    let retType = evalFuncReturnType ftype
+    let funcType = DetFunc paramTypes retType
+    let rhoFT' = mapSet rhoFT func funcType -- recursion is allowed
+    local (const (rhoVT, rhoFT')) $ do
+        (res, _, _) <- checkInstr instr
+        checkAllTypesEqual res (TSimple retType)
+        return (rhoVT, rhoFT')
+
+------------------------------------------ STATEMENTS -------------------------------------------
+-- In statements, we also hold the list of possible return types, i.e. if we have the if statement
+-- with return in both branches, we need to check if the types are equal. If we have a break or
+-- continue statement, we need to check if it is inside a loop.
+checkStmt :: Stmt -> TypeMonad [Type]
+
+checkStmt (SSkip) = return []
+
+checkStmt (SBreak exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            loopFlag <- getLoopFlag
+            if loopFlag then return []
+            else throwError BreakUsageOutsideLoop
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkStmt (SBreak1) = do
+    loopFlag <- getLoopFlag
+    if loopFlag then return []
+    else throwError BreakUsageOutsideLoop
+
+checkStmt (SContinue exp0) = do
+    t <- checkExpr exp0
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            loopFlag <- getLoopFlag
+            if loopFlag then return []
+            else throwError ContinueUsageOutsideLoop
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+checkStmt (SContinue0) = do
+    loopFlag <- getLoopFlag
+    if loopFlag then return []
+    else throwError ContinueUsageOutsideLoop
+
+checkStmt (SIf expr i0 i1) = do
+    t <- checkExpr expr
+    case t of
+        TSimple (SimpleBool STBool) -> do
+            (res0, rhoVT0, rhoFT0) <- checkInstr i0
+            (res1, rhoVT1, rhoFT1) <- checkInstr i1
+            return (res0 ++ res1)
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t)
+
+checkStmt (SWhile expr i) = do
+    t <- checkExpr expr
+    case t of
+        TSimple (SimpleBool STBool) -> do
+            loopFlag <- getLoopFlag
+            putLoopFlag True
+            (res, rhoVT, rhoFT) <- checkInstr i
+            putLoopFlag loopFlag
+            return res
+        _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t)
+
+checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
+    tfrom <- checkExpr exprFrom
+    case tfrom of
+        TSimple (SimpleInt STInt) -> do
+            tto <- checkExpr exprTo
+            case tto of
+                TSimple (SimpleInt STInt) -> do
+                    loopFlag <- getLoopFlag
+                    putLoopFlag True
+                    (res, rhoVT, rhoFT) <- checkInstr instr
+                    putLoopFlag loopFlag
+                    return res
+                _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tto)
+
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tfrom)
+
+checkStmt (SReturn expr) = do
+    t <- checkExpr expr
+    return [t]
+
+-- Print is allowed only for simple types
+checkStmt (SPrint expr) = do
+    t <- checkExpr expr
+    case t of
+        TSimple _ -> return []
+        _ -> throwError (InvalidPrintArgType t)
+
+checkStmt (VarAssign (Ident var) expr) = do
+    t <- checkExpr expr
+    t' <- getVarType var
+    if t == t' then return []
+    else throwError (TypeMismatch t' t)
+
+checkStmt (VarAssignPlus (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (VarAssignMinus (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (VarAssignMul (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (VarAssignDiv (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (VarAssignMod (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (ArrElSet (Ident arr) exprIndex exprVal) = do
+    tIndex <- checkExpr exprIndex
+    case tIndex of
+        TSimple (SimpleInt STInt) -> do
+            tVal <- checkExpr exprVal
+            tArr <- getVarType arr
+            case tArr of
+                TComplex (TArray st) -> if tVal == TSimple st then return []
+                    else throwError (TypeMismatch (TSimple st) tVal)
+                _ -> throwError (TypeMismatch (TComplex (TArray (SimpleInt STInt))) tArr)
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tIndex)
+
+checkStmt (DictElSet (Ident dict) exprKey exprVal) = do
+    tKey <- checkExpr exprKey
+    case tKey of
+        TSimple (SimpleInt STInt) -> do
+            tVal <- checkExpr exprVal
+            tDict <- getVarType dict
+            case tDict of
+                TComplex (TDict st) -> if tVal == TSimple st then return []
+                    else throwError (TypeMismatch (TSimple st) tVal)
+                _ -> throwError (TypeMismatch (TComplex (TDict (SimpleInt STInt))) tDict)
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tKey)
+
+checkIntAssign :: Var -> Expr -> TypeMonad [Type]
+checkIntAssign var expr = do
+    t <- checkExpr expr
+    case t of
+        TSimple (SimpleInt STInt) -> do
+            t' <- getVarType var
+            if t' == TSimple (SimpleInt STInt) then return []
+            else throwError (TypeMismatch (TSimple (SimpleInt STInt)) t')
+        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) t)
+
+------------------------------------------ SPECIAL STATEMENTS -------------------------------------
+
+checkSpecStmt :: SpecStmt -> TypeMonad (TVEnv, TFEnv)
+
+-- Swapping variables is allowed only for simple types, arrays and dictionaries
+checkSpecStmt (SSwap (Ident var1) (Ident var2)) = do
+    (rhoVT, rhoFT) <- ask
+    tsto <- getTStore
+    t1 <- getVarType var1
+    t2 <- getVarType var2
+    case (t1, t2) of
+        (TSimple (SimpleInt STInt), TSimple (SimpleInt STInt)) -> do
+            loc1 <- getVarLoc var1
+            loc2 <- getVarLoc var2
+            let rhoVT' = tsetVarLoc (tsetVarLoc rhoVT var1 loc2) var2 loc1
+            return (rhoVT', rhoFT)
+        (TSimple (SimpleBool STBool), TSimple (SimpleBool STBool)) -> do
+            loc1 <- getVarLoc var1
+            loc2 <- getVarLoc var2
+            let rhoVT' = tsetVarLoc (tsetVarLoc rhoVT var1 loc2) var2 loc1
+            return (rhoVT', rhoFT)
+        (TComplex (TArray st1), TComplex (TArray st2)) -> do
+            if st1 == st2 then do
+                loc1 <- getVarLoc var1
+                loc2 <- getVarLoc var2
+                let rhoVT' = tsetVarLoc (tsetVarLoc rhoVT var1 loc2) var2 loc1
+                return (rhoVT', rhoFT)
+            else throwError (TypeMismatch (TComplex (TArray st1)) (TComplex (TArray st2)))
+        (TComplex (TDict st1), TComplex (TDict st2)) -> do
+            if st1 == st2 then do
+                loc1 <- getVarLoc var1
+                loc2 <- getVarLoc var2
+                let rhoVT' = tsetVarLoc (tsetVarLoc rhoVT var1 loc2) var2 loc1
+                return (rhoVT', rhoFT)
+            else throwError (TypeMismatch (TComplex (TDict st1)) (TComplex (TDict st2)))
+        (TFunction _, _) -> throwError (InvalidSwapArgType t1)
+        (_, TFunction _) -> throwError (InvalidSwapArgType t2)
+        _ -> throwError (TypeMismatch t1 t2)
+
+-- Debugging works only on Simple types
+checkSpecStmt (DebugAssEnable (Ident var)) = checkDebug var
+
+checkSpecStmt (DebugAssDisable (Ident var)) = checkDebug var
+
+checkSpecStmt (DebugReadEnable (Ident var)) = checkDebug var
+
+checkSpecStmt (DebugReadDisable (Ident var)) = checkDebug var
+
+checkDebug :: Var -> TypeMonad (TVEnv, TFEnv)
+checkDebug var = do
+    t <- getVarType var
+    case t of
+        TSimple _ -> do
+            (rhoVT, rhoFT) <- ask
+            return (rhoVT, rhoFT)
+        _ -> throwError (InvalidDebugArgType t)

@@ -1,6 +1,11 @@
 -- TODOS:
 -- > Remove unsafePrint from setVarVal and getVarVal
 -- > Move static type checker to a separate file
+-- > Tests to reconsider:
+-- > good (042, 062, 080-100, 103, 504 (add type for counter in for loop),
+-- > 101, 102, 104, 105, 503)
+-- > bad (001, 002, 005, 012, 016-017 (move to good), 018, 019, 030,
+-- > 061, 071, 090, 091, 103, 107, 108, 109 (type check should fail))
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

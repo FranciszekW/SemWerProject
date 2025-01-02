@@ -2,8 +2,7 @@
 -- > Remove unsafePrint from setVarVal and getVarVal
 -- > Move static type checker to a separate file
 -- > Tests to reconsider:
--- > good (042, 062, 080-100, 103, 504 (add type for counter in for loop),
--- > 101, 102, 104, 105, 503)
+-- > good (042, 062, 101, 102, 104, 105, 503)
 -- > bad (001, 002, 005, 012, 016-017 (move to good), 018, 019, 030,
 -- > 061, 071, 090, 091, 103, 107, 108, 109 (type check should fail))
 
@@ -1118,11 +1117,8 @@ getFuncType var = do
         Just t -> return (TFunction t)
         Nothing -> throwError (FunctionNotInScope (Ident var))
 
-setFuncType :: Var -> DetailedFuncType -> TypeMonad TFEnv
-setFuncType var t = do
-    (rhoVT, rhoFT) <- ask
-    let rhoFT' = mapSet rhoFT var t
-    return rhoFT'
+setFuncType :: TFEnv -> Var -> DetailedFuncType -> TFEnv
+setFuncType rho func t = mapSet rho func t
 
 checkAllTypesEqual :: [Type] -> Type -> TypeMonad ()
 checkAllTypesEqual [] _ = return ()
@@ -1388,16 +1384,17 @@ checkDef (DictDef stype (Ident dict)) = do
 -- and compare them with the function return type. We also need to update the environments
 -- based on the function parameters.
 checkDef (FuncDef ftype (Ident func) params instr) = do
+    (rhoVT0, rhoFT0) <- ask
     let paramList = eP params
-    (rhoVT, rhoFT) <- prepareParamEnv paramList
     let funcType = DetFunc (evalParamTypes paramList) (evalFuncReturnType ftype)
-    rhoFT' <- setFuncType func funcType
+    (rhoVT, rhoFT) <- prepareParamEnv paramList
+    let rhoFT' = setFuncType rhoFT func funcType
     local (const (rhoVT, rhoFT')) $ do
         (res, rhoVT', rhoFT'') <- checkInstr instr
         let retTypes = res
         let retType = evalFuncReturnType ftype
         checkAllTypesEqual retTypes (TSimple retType)
-        return (rhoVT', rhoFT'')
+        return (rhoVT0, setFuncType rhoFT0 func funcType)
 
 
 prepareParamEnv :: [FuncParam] -> TypeMonad (TVEnv, TFEnv)
@@ -1475,6 +1472,22 @@ checkStmt (SWhile expr i) = do
             return res
         _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t)
 
+--checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
+--    tfrom <- checkExpr exprFrom
+--    case tfrom of
+--        TSimple (SimpleInt STInt) -> do
+--            tto <- checkExpr exprTo
+--            case tto of
+--                TSimple (SimpleInt STInt) -> do
+--                    loopFlag <- getLoopFlag
+--                    putLoopFlag True
+--                    (res, rhoVT, rhoFT) <- checkInstr instr
+--                    putLoopFlag loopFlag
+--                    return res
+--                _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tto)
+--
+--        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tfrom)
+
 checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
     tfrom <- checkExpr exprFrom
     case tfrom of
@@ -1484,12 +1497,20 @@ checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
                 TSimple (SimpleInt STInt) -> do
                     loopFlag <- getLoopFlag
                     putLoopFlag True
-                    (res, rhoVT, rhoFT) <- checkInstr instr
-                    putLoopFlag loopFlag
-                    return res
+                    (rhoVT, rhoFT) <- ask
+                    tsto <- getTStore
+                    let (loc, tsto') = tnewloc tsto
+                    let rhoVT' = mapSet rhoVT var loc
+                    let tsto'' = setLocType tsto' loc (TSimple (SimpleInt STInt))
+                    putTStore tsto''
+                    local (const (rhoVT', rhoFT)) $ do
+                        (res, rhoVT, rhoFT) <- checkInstr instr
+                        putLoopFlag loopFlag
+                        return res
                 _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tto)
 
         _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tfrom)
+
 
 checkStmt (SReturn expr) = do
     t <- checkExpr expr

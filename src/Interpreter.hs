@@ -966,11 +966,17 @@ mcompute s =
                                     putStrLn "Program returned without a value."
 
 
-mprocessFile :: FilePath -> IO ()
-mprocessFile path = do
+mprocessFileOneLine :: FilePath -> IO ()
+mprocessFileOneLine path = do
     content <- readFile path
     let strippedContent = Prelude.filter (/= '\n') content
     mcompute strippedContent
+
+-- Now a function to process a file without clearing the newlines
+mprocessFile :: FilePath -> IO ()
+mprocessFile path = do
+    content <- readFile path
+    mcompute content
 
 
 ------------------------------------------ TYPE CHECKING -------------------------------------------

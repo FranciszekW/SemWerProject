@@ -2,9 +2,8 @@
 -- > Remove unsafePrint from setVarVal and getVarVal
 -- > Move static type checker to a separate file
 -- > Tests to reconsider:
--- > good (042, 062, 101, 102, 104, 105, 503)
--- > bad (001, 002, 005, 012, 016-017 (move to good), 018, 019, 030,
--- > 061, 071, 090, 091, 103, 107, 108
+-- > good ()
+-- > bad (103)
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -81,7 +80,9 @@ data Error =  DivByZero
             | IndexOutOfBounds Integer
             | InvalidArraySize Integer
             | InvalidBreakArgument Integer
+            | TooLargeBreakArgument Integer
             | InvalidContinueArgument Integer
+            | TooLargeContinueArgument Integer
             | TypeMismatch Type Type
             | VariableNotDefined Ident
             | BreakUsageOutsideLoop
@@ -100,7 +101,9 @@ instance Show Error where
     show (IndexOutOfBounds i) = "Index " ++ show i ++ " out of bounds"
     show (InvalidArraySize s) = "Invalid array size: " ++ show s
     show (InvalidBreakArgument n) = "Invalid break argument: " ++ show n
+    show (TooLargeBreakArgument n) = "Too large break argument: " ++ show n
     show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
+    show (TooLargeContinueArgument n) = "Too large continue argument: " ++ show n
     show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
     show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
     show BreakUsageOutsideLoop = "Break used outside of loop"
@@ -118,8 +121,9 @@ type DebugFlag = Bool
 type BreakCount = Integer
 -- ContinueFlag is simply a bool, because continue outer n is equivalent to n breaks and then continue.
 type ContinueFlag = Bool
+type NestingLevel = Integer
 
-type ControlFlow = (BreakCount, ContinueFlag)
+type ControlFlow = (BreakCount, ContinueFlag, NestingLevel)
 
 -- One for assignment of a variable and one for reading a variable.
 type DebugFlags = (DebugFlag, DebugFlag)
@@ -188,12 +192,12 @@ getControlFlow = WorkingMonad $ do
 
 getBreakCount :: WorkingMonad Integer
 getBreakCount = WorkingMonad $ do
-    (breakCount, _) <- runWorkingMonad getControlFlow
+    (breakCount, _, _) <- runWorkingMonad getControlFlow
     return breakCount
 
 getContinueFlag :: WorkingMonad Bool
 getContinueFlag = WorkingMonad $ do
-    (_, continueFlag) <- runWorkingMonad getControlFlow
+    (_, continueFlag, _) <- runWorkingMonad getControlFlow
     return continueFlag
 
 putStore :: Store -> WorkingMonad ()
@@ -449,7 +453,7 @@ iMI (ISeq instr0 instr1) = do
     case res0 of
         Just val -> return (Just val, rhoV0, rhoF0)
         Nothing -> do
-            (breakCount, continueFlag) <- getControlFlow
+            (breakCount, continueFlag, _) <- getControlFlow
             if  (breakCount > 0 || continueFlag) then
                 return (Nothing, rhoV0, rhoF0)
             else do
@@ -663,25 +667,37 @@ iMS (SSkip) = return Nothing
 
 iMS (SBreak exp0) = do
     (VInt n) <- eMe exp0
+    (_, _, nestingLevel) <- getControlFlow
     if n < 0 then throwError (InvalidBreakArgument n)
     else do
-        putControlFlow (n, False) -- the flags had to be zero before the break
-        return Nothing
+        if nestingLevel < n then throwError (TooLargeBreakArgument n)
+        else do
+            putControlFlow (n, False, nestingLevel)
+            return Nothing
 
 iMS (SBreak1) = do
-    putControlFlow (1, False)
-    return Nothing
+    (_, _, nestingLevel) <- getControlFlow
+    if nestingLevel < 1 then throwError (TooLargeBreakArgument 1)
+    else do
+        putControlFlow (1, False, nestingLevel)
+        return Nothing
 
 iMS (SContinue exp0) = do
     (VInt n) <- eMe exp0
+    (_, _, nestingLevel) <- getControlFlow
     if n < 0 then throwError (InvalidContinueArgument n)
     else do
-        putControlFlow (n, True)
-        return Nothing
+        if nestingLevel < n then throwError (TooLargeContinueArgument n)
+        else do
+            putControlFlow (n, True, nestingLevel)
+            return Nothing
 
 iMS (SContinue0) = do
-    putControlFlow (0, True)
-    return Nothing
+    (_, _, nestingLevel) <- getControlFlow
+    if nestingLevel < 1 then throwError (TooLargeContinueArgument 1)
+    else do
+        putControlFlow (0, True, nestingLevel)
+        return Nothing
 
 iMS (SIf expr i0 i1) = do
     (VBool b) <- eMe expr
@@ -693,26 +709,28 @@ iMS (SIf expr i0 i1) = do
         return res2
 
 iMS (SWhile expr i) = do
+    (bc, cf, nl) <- getControlFlow
+    putControlFlow (bc, cf, nl + 1)
     let x = do
         (VBool b) <- eMe expr
         if b then do
             (res, rhoV, rhoF) <- iMI i -- instructions in while loop can modify the environment
             case res of
                 Just val -> do
-                    putControlFlow (0, False) -- reset the flags
+                    putControlFlow (0, False, 0) -- reset the flags
                     return (Just val)
                 Nothing -> do
-                    (breakCount, continueFlag) <- getControlFlow
+                    (breakCount, continueFlag, _) <- getControlFlow
                     if breakCount > 0 then do
-                        putControlFlow (breakCount - 1, continueFlag)
+                        putControlFlow (breakCount - 1, continueFlag, nl)
                         return Nothing
                     else if continueFlag then do
-                        putControlFlow (0, False) -- reset the flags
+                        putControlFlow (0, False, nl + 1) -- reset the flags
                         local (const (rhoV, rhoF)) x
                     else
                         local (const (rhoV, rhoF)) x
         else do
-            putControlFlow (0, False) -- reset the flags
+            putControlFlow (0, False, nl) -- reset the flags
             return Nothing
     x
 
@@ -720,6 +738,8 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
     (VInt from) <- eMe exprFrom
     (VInt to) <- eMe exprTo
     (rhoV, rhoF) <- iMD (VarDef (STI STInt) (Ident var) (ENum from))
+    (bc, cf, nl) <- getControlFlow
+    putControlFlow (bc, cf, nl + 1)
     local (const (rhoV, rhoF)) $ do
         let x = do
             (VInt val) <- eMe (VarVal (Ident var))
@@ -727,22 +747,22 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
                 (res, rhoV, rhoF) <- iMI instr
                 case res of
                     Just val -> do
-                        putControlFlow (0, False) -- reset the flags
+                        putControlFlow (0, False, 0) -- reset the flags
                         return (Just val)
                     Nothing -> do
-                        (breakCount, continueFlag) <- getControlFlow
+                        (breakCount, continueFlag, _) <- getControlFlow
                         if breakCount > 0 then do
-                            putControlFlow (breakCount - 1, continueFlag)
+                            putControlFlow (breakCount - 1, continueFlag, nl)
                             return Nothing
                         else if continueFlag then do
-                            putControlFlow (0, False) -- reset the flags
+                            putControlFlow (0, False, nl + 1) -- reset the flags
                             msetVarVal var (SimpleVal (VInt (val + 1)))
                             local (const (rhoV, rhoF)) x
                         else do
                             msetVarVal var (SimpleVal (VInt (val + 1)))
                             local (const (rhoV, rhoF)) x
             else do
-                putControlFlow (0, False) -- reset the flags
+                putControlFlow (0, False, nl) -- reset the flags
                 return Nothing
         x
 
@@ -909,7 +929,7 @@ mcompute s =
     case pInstr (myLexer s) of
         Left err -> do
             putStrLn "Parse Failed...\n"
-            putStrLn err
+            hPutStrLn stderr err
             exitFailure
         Right e -> do
             putStrLn "Parse Successful!\n"
@@ -927,7 +947,7 @@ mcompute s =
                 Right _ -> do
                     putStrLn "Type Check Successful!\n" >> hFlush stdout
                     let initialEnv = (rhoV0, rhoFM0)
-                    let initialState = (sto0, (0, False))
+                    let initialState = (sto0, (0, False, 0))
 
                     result <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI e))) initialEnv) initialState
 
@@ -1284,6 +1304,15 @@ checkArgs (ArgsLambda lambda) = do
 
 checkArgs (ArgsLambdaMany lambda args) = do
     t <- checkLambda lambda
+    ts <- checkArgs args
+    return (t : ts)
+
+checkArgs (ArgsFunc (Ident func)) = do
+    t <- getFuncType func
+    return [t]
+
+checkArgs (ArgsFuncMany (Ident func) args) = do
+    t <- getFuncType func
     ts <- checkArgs args
     return (t : ts)
 

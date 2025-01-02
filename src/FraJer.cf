@@ -17,15 +17,15 @@ comment "/*" "*/" ;
 -- ST ::= int | bool
 -- FT ::= Ifun | Bfun
 
-STInt.  STInt ::= "Int";
-STBool. STBool ::= "Bool";
-FTInt. FTInt ::= "IntFunc";
-FTBool. FTBool ::= "BoolFunc";
+STInt.  SSTInt ::= "Int";
+STBool. SSTBool ::= "Bool";
+FTInt. FFTInt ::= "IntFunc";
+FTBool. FFTBool ::= "BoolFunc";
 
-STI. SimpleType ::= STInt;
-STB. SimpleType ::= STBool;
-FTI. FuncType ::= FTInt;
-FTB. FuncType ::= FTBool;
+STI. SimpleType ::= SSTInt;
+STB. SimpleType ::= SSTBool;
+FTI. FuncType ::= FFTInt;
+FTB. FuncType ::= FFTBool;
 
 -- --------------------------------------------------------------------------------------------- --
 
@@ -182,11 +182,18 @@ VarAssignMinus.    Stmt1 ::= Ident "-=" Expr;
 VarAssignMul.      Stmt1 ::= Ident "*=" Expr;
 VarAssignDiv.      Stmt1 ::= Ident "/=" Expr;
 VarAssignMod.      Stmt1 ::= Ident "%=" Expr;
+VarInc.            Stmt1 ::= "++" Ident;
+varInc.            Stmt1 ::= Ident "++";
+VarDec.            Stmt1 ::= "--" Ident;
+varDec.            Stmt1 ::= Ident "--";
 
 ArrElSet.      Stmt1 ::= Ident "[" Expr "]" "=" "(" Expr ")";
 DictElSet.     Stmt1 ::= Ident "set" "[" Expr "]" "to" "(" Expr ")";
 
 _. Stmt ::= Stmt1;
+
+define varInc x = VarInc x;
+define varDec x = VarDec x;
 
 ---------------------------------SPECIAL STATEMENTS-----------------------------------------------
 -- Debugging and swapping for now.

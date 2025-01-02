@@ -4,7 +4,7 @@
 -- > Tests to reconsider:
 -- > good (042, 062, 101, 102, 104, 105, 503)
 -- > bad (001, 002, 005, 012, 016-017 (move to good), 018, 019, 030,
--- > 061, 071, 090, 091, 103, 107, 108, 109 (type check should fail))
+-- > 061, 071, 090, 091, 103, 107, 108
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -28,7 +28,7 @@ import Data.Map
 import qualified GHC.Integer (leInteger) 
 
 -- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( STInt(..), STBool(..), FTInt(..), FTBool(..), SimpleType(..), FuncType(..),
+import FraJer.Abs   ( SSTInt(..), SSTBool(..), FFTInt(..), FFTBool(..), SimpleType(..), FuncType(..),
                       Ident(..), Expr(..), Args(..), Params(..),
                       Instr(..), Def(..), Stmt(..), SpecStmt(..), Lambda(..) )
 import FraJer.Lex   ( Token, mkPosToken )
@@ -809,6 +809,9 @@ iMS (VarAssignMod (Ident var) expr) = do
                 return (Nothing)
 --        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
 
+iMS (VarInc (Ident var)) = iMS (VarAssignPlus (Ident var) (ENum 1))
+
+iMS (VarDec (Ident var)) = iMS (VarAssignMinus (Ident var) (ENum 1))
 
 iMS (ArrElSet (Ident arr) exprIndex exprVal) = do
     val <- eMe exprVal
@@ -967,7 +970,7 @@ mprocessFile path = do
 --            | CustomError String
 -- Static type checker
 
-data SType = SimpleInt STInt | SimpleBool STBool deriving (Show, Eq)
+data SType = SimpleInt SSTInt | SimpleBool SSTBool deriving (Show, Eq)
 --data FType = FuncInt FTInt | FuncBool FTBool deriving (Show, Eq)
 
 -- SType and FType are types from Frajer.cf.
@@ -1538,6 +1541,10 @@ checkStmt (VarAssignMul (Ident var) expr) = checkIntAssign var expr
 checkStmt (VarAssignDiv (Ident var) expr) = checkIntAssign var expr
 
 checkStmt (VarAssignMod (Ident var) expr) = checkIntAssign var expr
+
+checkStmt (VarInc (Ident var)) = checkIntAssign var (ENum 1)
+
+checkStmt (VarDec (Ident var)) = checkIntAssign var (ENum 1)
 
 checkStmt (ArrElSet (Ident arr) exprIndex exprVal) = do
     tIndex <- checkExpr exprIndex

@@ -1,4 +1,4 @@
-BoolFunc f(Int n) {
+IntFunc f(Int n) {
     if(n <= 1) {
         return(1)
     } else {

@@ -1,7 +1,7 @@
-IntFunc f(IntFunc g) {
+IntFunc f(IntFunc (Int x) g) {
     return(g(3))
 };
 IntFunc h(Int x) {
     return(x * 2)
 };
-return(f(h));
+return(f(func h));

@@ -1,7 +1,7 @@
-IntFunc f(IntFunc g) {
+IntFunc f(IntFunc (Int x) g) {
     return(g(3))
 };
 BoolFunc h(none) {
     return(false)
 };
-return(f(h));
+return(f(func h));

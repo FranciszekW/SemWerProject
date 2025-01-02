@@ -1,3 +1,27 @@
 Parse Successful!
 
-Type Check Failed...
+Type Check Successful!
+
+VInt 120
+VInt 60
+VInt 30
+VInt 15
+VInt 46
+VInt 23
+VInt 70
+VInt 35
+VInt 106
+VInt 53
+VInt 160
+VInt 80
+VInt 40
+VInt 20
+VInt 10
+VInt 5
+VInt 16
+VInt 8
+VInt 4
+VInt 2
+VInt 1
+Computation Successful!
+Program returned with value: VInt 1

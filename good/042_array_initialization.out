@@ -1,3 +1,9 @@
 Parse Successful!
 
-Type Check Failed...
+Type Check Successful!
+
+VBool False
+VInt 1
+Computation Successful!
+
+Program returned without a value.

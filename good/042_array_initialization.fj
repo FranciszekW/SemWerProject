@@ -1,4 +1,4 @@
-Array Int a [3] (false);
-Array Bool b [2] (1);
+Array Bool a [3] (false);
+Array Int b [2] (1);
 print(a[1]);
 print(b[0]);

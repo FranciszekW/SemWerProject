@@ -1,3 +1,9 @@
 Parse Successful!
 
-Type Check Failed...
+Type Check Successful!
+
+VInt 1
+VInt 2
+VInt 3
+VInt 4
+Computation Failed...

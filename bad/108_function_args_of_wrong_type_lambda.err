@@ -1,0 +1,1 @@
+Error: Type mismatch: TFunction (DetFunc [TFunction (DetFunc [TSimple (SimpleInt STInt)] (SimpleInt STInt))] (SimpleInt STInt)) and TFunction (DetFunc [TFunction (DetFunc [TSimple (SimpleInt STInt)] (SimpleBool STBool))] (SimpleInt STInt))

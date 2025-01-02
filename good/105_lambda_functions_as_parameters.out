@@ -1,3 +1,6 @@
-Parse Failed...
+Parse Successful!
 
-syntax error at line 1, column 19 before `g'
+Type Check Successful!
+
+Computation Successful!
+Program returned with value: VInt 6

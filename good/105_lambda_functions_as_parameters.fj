@@ -1,4 +1,4 @@
-IntFunc f(IntFunc g) {
+IntFunc f(IntFunc (Int x) g) {
     return(g(3))
 };
 return(f(IntFunc lambda (Int x) -> {return(x * 2)}));

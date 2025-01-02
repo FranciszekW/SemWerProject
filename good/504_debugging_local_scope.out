@@ -1,3 +1,14 @@
 Parse Successful!
 
-Type Check Failed...
+Type Check Successful!
+
+Reading: "x" = SimpleVal (VInt 1)
+VInt 2
+Reading: "x" = SimpleVal (VInt 1)
+VInt 3
+Reading: "x" = SimpleVal (VInt 1)
+VInt 4
+VInt 1
+Computation Successful!
+
+Program returned without a value.

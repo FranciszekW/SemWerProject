@@ -1,3 +1,6 @@
 Parse Successful!
 
-Type Check Failed...
+Type Check Successful!
+
+Computation Successful!
+Program returned with value: VInt 5040

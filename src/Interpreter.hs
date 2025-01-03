@@ -6,28 +6,14 @@
 
 import Prelude
 
-import System.IO (readFile, hFlush, stdout, stderr, hPutStrLn)
+import System.IO (hFlush, stdout, stderr, hPutStrLn)
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
-import Control.Monad      ( when, ap, liftM )
-import Control.Monad.Reader ( Reader, ReaderT, MonadReader, MonadIO, runReader, runReaderT, ask, local, liftIO, ap, liftM, lift )
-import Control.Monad.State  ( State, StateT, MonadState, MonadIO, evalState, evalStateT, get, put, liftIO, ap, liftM, lift )
-import Control.Monad.Except ( ExceptT, MonadError, MonadIO, runExceptT, throwError, catchError, liftIO, ap, liftM, lift )
-import Control.Monad.Identity ( Identity, runIdentity, ap, liftM )
 
 import TypeChecker (performTypeCheck)
 import Executor (runProgram)
 
-import Data.Map
-import qualified GHC.Integer (leInteger) 
-
--- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( SSTInt(..), SSTBool(..), FFTInt(..), FFTBool(..), SimpleType(..), FuncType(..),
-                      Ident(..), Expr(..), Args(..), Params(..),
-                      Instr(..), Def(..), Stmt(..), SpecStmt(..), Lambda(..) )
-import FraJer.Lex   ( Token, mkPosToken )
-import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
-import FraJer.Print ( Print, printTree )
+import FraJer.Par   ( pInstr, myLexer )
 
 
 -- Example usage of the interpreter

@@ -1,4 +1,3 @@
-
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -64,42 +63,24 @@ data FuncArg = SimpleArg SimpleValue | FArg MFunc
 data Error =  DivByZero
             | ModByZero
             | KeyNotInDict DictKey
-            | FunctionNotInScope Ident
             | IndexOutOfBounds Integer
             | InvalidArraySize Integer
             | InvalidBreakArgument Integer
             | TooLargeBreakArgument Integer
             | InvalidContinueArgument Integer
             | TooLargeContinueArgument Integer
-            -- | TypeMismatch Type Type
-            | VariableNotDefined Ident
-            | BreakUsageOutsideLoop
-            | ContinueUsageOutsideLoop
-            | NotASimpleValue Ident
-            -- | InvalidPrintArgType Type
-            -- | InvalidSwapArgType Type
-            -- | InvalidDebugArgType Type
             | CustomError String
 
 instance Show Error where
     show DivByZero = "Division by zero"
     show ModByZero = "Modulo by zero"
     show (KeyNotInDict k) = "Key " ++ show k ++ " not in dictionary"
-    show (FunctionNotInScope (Ident f)) = "Function " ++ f ++ " not in scope"
     show (IndexOutOfBounds i) = "Index " ++ show i ++ " out of bounds"
     show (InvalidArraySize s) = "Invalid array size: " ++ show s
     show (InvalidBreakArgument n) = "Invalid break argument: " ++ show n
     show (TooLargeBreakArgument n) = "Too large break argument: " ++ show n
     show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
     show (TooLargeContinueArgument n) = "Too large continue argument: " ++ show n
-    -- show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
-    show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
-    show BreakUsageOutsideLoop = "Break used outside of loop"
-    show ContinueUsageOutsideLoop = "Continue used outside of loop"
-    show (NotASimpleValue (Ident var)) = "Variable " ++ var ++ " is not a simple value"
-    -- show (InvalidPrintArgType t) = "Invalid print argument type: " ++ show t
-    -- show (InvalidSwapArgType t) = "Invalid swap argument type: " ++ show t
-    -- show (InvalidDebugArgType t) = "Invalid debug argument type: " ++ show t
 
 ------------------------------------------ ENVIRONMENTS -------------------------------------------
 
@@ -219,7 +200,6 @@ msetVarVal var val = do
                  putStore (CStore (mapSet (currMap sto) loc val) (nextLoc sto))
             else do
                  putStore (CStore (mapSet (currMap sto) loc val) (nextLoc sto))
-        Nothing -> throwError (VariableNotDefined (Ident var))
 
 -- Here we throw an error if the variable is not defined.
 mgetVarVal :: Var -> WorkingMonad Value
@@ -234,7 +214,6 @@ mgetVarVal var = do
                 return val
             else do
                 return val
-        Nothing -> throwError (VariableNotDefined (Ident var))
 
 
 -- not monadic:
@@ -267,7 +246,6 @@ eMe (VarVal (Ident var)) = do
     val <- mgetVarVal var
     case val of
         SimpleVal x -> return x
-        ComplexVal _ -> throwError (NotASimpleValue (Ident var))
 
 eMe (EPlus exp0 exp1) = do
     (VInt x) <- eMe exp0
@@ -388,7 +366,6 @@ mgetfunc (Ident func) = do
     (_, rhoF) <- ask
     case Data.Map.lookup func rhoF of
         Just f -> return f
-        Nothing -> throwError (FunctionNotInScope (Ident func))
 
 mgetarray :: Ident -> WorkingMonad Arr
 mgetarray (Ident arr) = do
@@ -398,7 +375,6 @@ mgetarray (Ident arr) = do
             sto <- getStore
             ComplexVal (VArray a) <- mgetVarVal arr
             return a
-        Nothing -> throwError (VariableNotDefined (Ident arr))
 
 mgetdict :: Ident -> WorkingMonad Dict
 mgetdict (Ident dict) = do
@@ -408,7 +384,6 @@ mgetdict (Ident dict) = do
             sto <- getStore
             ComplexVal (VDict d) <- mgetVarVal dict
             return d
-        Nothing -> throwError (VariableNotDefined (Ident dict))
 
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
 iMI :: Instr -> WorkingMonad (Maybe SimpleValue, VEnv, FMEnv)
@@ -824,7 +799,6 @@ mgetvarloc (Ident var) = do
     (rhoV, _) <- ask
     case Data.Map.lookup var rhoV of
         Just (loc, flags) -> return (loc, flags)
-        Nothing -> throwError (VariableNotDefined (Ident var))
 
 iMSpecS :: SpecStmt -> WorkingMonad (VEnv, FMEnv)
 
@@ -872,6 +846,7 @@ initialEnv = (rhoV0, rhoFM0)
 sto0:: Store
 sto0 = CStore empty 0
 
+initialState :: (Store, (BreakCount, Bool, NestingLevel))
 initialState = (sto0, (0, False, 0))
 
 runProgram :: Instr -> IO (Either Error (Maybe SimpleValue))

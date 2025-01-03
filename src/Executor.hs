@@ -8,28 +8,20 @@ module Executor (
 
 import Prelude
 
-import System.IO (readFile, hFlush, stdout, stderr, hPutStrLn)
-import System.Environment ( getArgs )
-import System.Exit        ( exitFailure )
-import Control.Monad      ( when, ap, liftM )
-import Control.Monad.Reader ( Reader, ReaderT, MonadReader, MonadIO, runReader, runReaderT, ask, local, liftIO, ap, liftM, lift )
-import Control.Monad.State  ( State, StateT, MonadState, MonadIO, evalState, evalStateT, get, put, liftIO, ap, liftM, lift )
-import Control.Monad.Except ( ExceptT, MonadError, MonadIO, runExceptT, throwError, catchError, liftIO, ap, liftM, lift )
-import Control.Monad.Identity ( Identity, runIdentity, ap, liftM )
+import Control.Monad      ( ap, liftM )
+import Control.Monad.Reader ( ReaderT, MonadReader, MonadIO, runReaderT, ask, local, liftIO, lift )
+import Control.Monad.State  ( StateT, MonadState, evalStateT, get, put )
+import Control.Monad.Except ( ExceptT, MonadError, runExceptT, throwError, catchError )
+import Control.Monad.Identity ( )
 
 import TypeChecker
 
 import Data.Map
-import qualified GHC.Integer (leInteger) 
 
 -- Syntactic categories given in the FraJer.cf file
-import FraJer.Abs   ( SSTInt(..), SSTBool(..), FFTInt(..), FFTBool(..), SimpleType(..), FuncType(..),
+import FraJer.Abs   ( SSTInt(..), SSTBool(..), SimpleType(..),
                       Ident(..), Expr(..), Args(..), Params(..),
                       Instr(..), Def(..), Stmt(..), SpecStmt(..), Lambda(..) )
-import FraJer.Lex   ( Token, mkPosToken )
-import FraJer.Par   ( pExpr, pInstr, pDef, pStmt, pLambda, myLexer )
-import FraJer.Print ( Print, printTree )
---import FraJer.Skel  ()
 
 mapGet :: (Ord k) => (Map k v) -> k -> v
 mapGet map arg = map ! arg

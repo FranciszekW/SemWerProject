@@ -4,6 +4,7 @@
 
 BNFC       = bnfc
 GHC        = ghc
+GHC_OPTS   = -Wall
 HAPPY      = happy
 HAPPY_OPTS = --array --info --ghc --coerce
 ALEX       = alex
@@ -42,7 +43,7 @@ src/FraJer/Test : src/FraJer/Abs.hs src/FraJer/Lex.hs src/FraJer/Par.hs src/FraJ
 
 
 interpreter : src/FraJer/Abs.hs src/FraJer/Lex.hs src/FraJer/Par.hs src/FraJer/Print.hs src/TypeChecker.hs src/Executor.hs src/Interpreter.hs
-	${GHC} -o $@ $^
+	${GHC} ${GHC_OPTS} -o $@ $^
 
 
 # Rules for cleaning generated files.

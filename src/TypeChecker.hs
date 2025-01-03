@@ -9,17 +9,14 @@ module TypeChecker
 
 import Prelude
 
-import System.IO (readFile, hFlush, stdout, stderr, hPutStrLn)
-import System.Environment ( getArgs )
-import System.Exit        ( exitFailure )
-import Control.Monad      ( when, ap, liftM )
-import Control.Monad.Reader ( Reader, ReaderT, MonadReader, MonadIO, runReader, runReaderT, ask, local, liftIO, ap, liftM, lift )
-import Control.Monad.State  ( State, StateT, MonadState, MonadIO, evalState, evalStateT, get, put, liftIO, ap, liftM, lift )
-import Control.Monad.Except ( ExceptT, MonadError, MonadIO, runExceptT, throwError, catchError, liftIO, ap, liftM, lift )
-import Control.Monad.Identity ( Identity, runIdentity, ap, liftM )
+import System.IO ()
+import Control.Monad      ( ap, liftM )
+import Control.Monad.Reader ( ReaderT, MonadReader, MonadIO, runReaderT, ask, local, liftIO, lift )
+import Control.Monad.State  ( StateT, MonadState, evalStateT, get, put )
+import Control.Monad.Except ( ExceptT, MonadError, runExceptT, throwError, catchError )
+import Control.Monad.Identity ( )
 
 import Data.Map
-import qualified GHC.Integer (leInteger)
 
 import FraJer.Abs   ( SSTInt(..), SSTBool(..), FFTInt(..), FFTBool(..), SimpleType(..), FuncType(..),
                       Ident(..), Expr(..), Args(..), Params(..),
@@ -27,7 +24,6 @@ import FraJer.Abs   ( SSTInt(..), SSTBool(..), FFTInt(..), FFTBool(..), SimpleTy
 
 type Var = String
 type Loc = Integer
-type DictKey = Integer
 
 data SimpleValue = VInt Integer | VBool Bool deriving (Show)
 
@@ -36,61 +32,27 @@ instance Eq SimpleValue where
   VBool x == VBool y = x == y
   _ == _ = False
 
-data Error =  DivByZero
-            | ModByZero
-            | KeyNotInDict DictKey
-            | FunctionNotInScope Ident
-            | IndexOutOfBounds Integer
-            | InvalidArraySize Integer
-            | InvalidBreakArgument Integer
-            | TooLargeBreakArgument Integer
-            | InvalidContinueArgument Integer
-            | TooLargeContinueArgument Integer
+data Error =  FunctionNotInScope Ident
             | TypeMismatch Type Type
             | VariableNotDefined Ident
             | BreakUsageOutsideLoop
             | ContinueUsageOutsideLoop
-            | NotASimpleValue Ident
             | InvalidPrintArgType Type
             | InvalidSwapArgType Type
             | InvalidDebugArgType Type
             | CustomError String
 
 instance Show Error where
-    show DivByZero = "Division by zero"
-    show ModByZero = "Modulo by zero"
-    show (KeyNotInDict k) = "Key " ++ show k ++ " not in dictionary"
     show (FunctionNotInScope (Ident f)) = "Function " ++ f ++ " not in scope"
-    show (IndexOutOfBounds i) = "Index " ++ show i ++ " out of bounds"
-    show (InvalidArraySize s) = "Invalid array size: " ++ show s
-    show (InvalidBreakArgument n) = "Invalid break argument: " ++ show n
-    show (TooLargeBreakArgument n) = "Too large break argument: " ++ show n
-    show (InvalidContinueArgument n) = "Invalid continue argument: " ++ show n
-    show (TooLargeContinueArgument n) = "Too large continue argument: " ++ show n
     show (TypeMismatch t1 t2) = "Type mismatch: " ++ show t1 ++ " and " ++ show t2
     show (VariableNotDefined (Ident var)) = "Variable " ++ var ++ " not defined"
     show BreakUsageOutsideLoop = "Break used outside of loop"
     show ContinueUsageOutsideLoop = "Continue used outside of loop"
-    show (NotASimpleValue (Ident var)) = "Variable " ++ var ++ " is not a simple value"
     show (InvalidPrintArgType t) = "Invalid print argument type: " ++ show t
     show (InvalidSwapArgType t) = "Invalid swap argument type: " ++ show t
     show (InvalidDebugArgType t) = "Invalid debug argument type: " ++ show t
+    show (CustomError s) = s
 
---data Error =  DivByZero
---            | ModByZero
---            | KeyNotInDict DictKey
---            | FunctionNotInScope Ident
---            | IndexOutOfBounds Integer
---            | InvalidArraySize Integer
---            | InvalidBreakArgument Integer
---            | InvalidContinueArgument Integer
---            | TypeMismatch Type Type
---            | VariableNotDefined Ident
---            | BreakUsageOutsideLoop
---            | ContinueUsageOutsideLoop
---            | NotASimpleValue Ident
---            | CustomError String
--- Static type checker
 
 data SType = SimpleInt SSTInt | SimpleBool SSTBool deriving (Show, Eq)
 --data FType = FuncInt FTInt | FuncBool FTBool deriving (Show, Eq)
@@ -121,15 +83,6 @@ data TypeStore = TStore {typeMap :: Map Loc Type, nextTypeLoc :: Loc} deriving S
 tnewloc:: TypeStore -> (Loc, TypeStore)
 tnewloc (TStore map loc) = (loc, TStore map (loc + 1))
 
---STInt.  STInt ::= "Int";
---STBool. STBool ::= "Bool";
---FTInt. FTInt ::= "IntFunc";
---FTBool. FTBool ::= "BoolFunc";
---
---STI. SimpleType ::= STInt;
---STB. SimpleType ::= STBool;
---FTI. FuncType ::= FTInt;
---FTB. FuncType ::= FTBool;
 evalSimpleType :: SimpleType -> SType
 evalSimpleType (STI STInt) = SimpleInt STInt
 evalSimpleType (STB STBool) = SimpleBool STBool
@@ -628,21 +581,6 @@ checkStmt (SWhile expr i) = do
             return res
         _ -> throwError (TypeMismatch (TSimple (SimpleBool STBool)) t)
 
---checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
---    tfrom <- checkExpr exprFrom
---    case tfrom of
---        TSimple (SimpleInt STInt) -> do
---            tto <- checkExpr exprTo
---            case tto of
---                TSimple (SimpleInt STInt) -> do
---                    loopFlag <- getLoopFlag
---                    putLoopFlag True
---                    (res, rhoVT, rhoFT) <- checkInstr instr
---                    putLoopFlag loopFlag
---                    return res
---                _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tto)
---
---        _ -> throwError (TypeMismatch (TSimple (SimpleInt STInt)) tfrom)
 
 checkStmt (SFor (Ident var) exprFrom exprTo instr) = do
     tfrom <- checkExpr exprFrom
@@ -793,10 +731,10 @@ checkDebug var = do
 
 
 rhoFT0:: TFEnv
-rhoFT0 = fromList []
+rhoFT0 = empty
 
 rhoVT0:: TVEnv
-rhoVT0 = fromList []
+rhoVT0 = empty
 
 tsto0:: TypeStore
 tsto0 = TStore empty 0

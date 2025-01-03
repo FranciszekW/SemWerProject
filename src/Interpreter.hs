@@ -1,5 +1,4 @@
 -- TODOS:
--- > Remove unsafePrint from setVarVal and getVarVal
 -- > Move static type checker to a separate file
 -- > Tests to reconsider:
 -- > good ()
@@ -15,7 +14,6 @@ import Prelude
 import System.IO (readFile, hFlush, stdout, stderr, hPutStrLn)
 import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
-import System.IO.Unsafe   ( unsafePerformIO )
 import Control.Monad      ( when, ap, liftM )
 import Control.Monad.Reader ( Reader, ReaderT, MonadReader, MonadIO, runReader, runReaderT, ask, local, liftIO, ap, liftM, lift )
 import Control.Monad.State  ( State, StateT, MonadState, MonadIO, evalState, evalStateT, get, put, liftIO, ap, liftM, lift )
@@ -211,16 +209,13 @@ putControlFlow controlFlow = do
     put (sto, controlFlow)
 -- in set VarVal we print the value if the write flag is set
 
--- Similar to getVarVal, but we need to check the write flag and if its set, print the value.
--- At the end we return the new store.
+-- In the non-monadic version, we don't have to check any flags. This function will be used
+-- only to declare variables, in which case the debugging flags are always false.
 setVarVal:: VEnv -> Store -> Var -> Value -> Store
 setVarVal rhoV sto var val =
     let (loc, (_, writeFlag)) = mapGet rhoV var in
-    let map = mapSet (currMap sto) loc val in
-        if writeFlag then
-            unsafePrint ("Writing: " ++ show var ++ " = " ++ show val) `seq` CStore map (nextLoc sto)
-        else
-            CStore map (nextLoc sto)
+    let map0 = mapSet (currMap sto) loc val in
+        CStore map0 (nextLoc sto)
 
 -- If the variable is not defined, we throw an error.
 msetVarVal :: Var -> Value -> WorkingMonad ()
@@ -254,8 +249,6 @@ mgetVarVal var = do
 
 -- not monadic:
 
-unsafePrint s = unsafePerformIO (putStrLn s) `seq` ()
-
 newloc:: Store -> (Loc, Store)
 newloc (CStore map loc) = (loc, CStore map (loc + 1))
 
@@ -263,23 +256,6 @@ setVarLoc:: VEnv -> Var -> Loc -> VEnv
 setVarLoc rhoV var loc =
     let (_, debugFlags) = mapGet rhoV var in
         mapSet rhoV var (loc, debugFlags)
-
--- in get VarVal we print the value if the read flag is set. At the end we return the value.
--- but we need to check the flag and if its set, print the value AND return it.
-getVarVal:: VEnv -> Store -> Var -> Value
-getVarVal rhoV sto var =
-    let (loc, (readFlag, _)) = mapGet rhoV var in
-    let val = mapGet (currMap sto) loc in
-        if readFlag then
-            unsafePrint ("Reading: " ++ show var ++ " = " ++ show val) `seq` val
-        else
-            val
-
---getVarVal:: VEnv -> Store -> Var -> Value
---getVarVal rhoV sto var =
---  let loc = mapGet rhoV var in
---    mapGet (currMap sto) loc
-
 
 replaceNth :: [a] -> Int -> a -> [a]
 replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) xs
@@ -389,7 +365,7 @@ eMe (BDictHasKey (Ident dict) exp0) = do
     (VInt i) <- eMe exp0
     (rhoV, _) <- ask
     sto <- getStore
-    let ComplexVal (VDict d) = getVarVal rhoV sto dict
+    ComplexVal (VDict d) <- mgetVarVal dict
     return (VBool (mapHasKey d i))
 
 -- helper functions:
@@ -430,7 +406,7 @@ mgetarray (Ident arr) = do
     case Data.Map.lookup arr rhoV of
         Just (loc, _) -> do
             sto <- getStore
-            let ComplexVal (VArray a) = getVarVal rhoV sto arr
+            ComplexVal (VArray a) <- mgetVarVal arr
             return a
         Nothing -> throwError (VariableNotDefined (Ident arr))
 
@@ -440,7 +416,7 @@ mgetdict (Ident dict) = do
     case Data.Map.lookup dict rhoV of
         Just (loc, _) -> do
             sto <- getStore
-            let ComplexVal (VDict d) = getVarVal rhoV sto dict
+            ComplexVal (VDict d) <- mgetVarVal dict
             return d
         Nothing -> throwError (VariableNotDefined (Ident dict))
 

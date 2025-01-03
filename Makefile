@@ -41,7 +41,7 @@ src/FraJer/Test : src/FraJer/Abs.hs src/FraJer/Lex.hs src/FraJer/Par.hs src/FraJ
 	${GHC} ${GHC_OPTS} $@
 
 
-interpreter : src/FraJer/Abs.hs src/FraJer/Lex.hs src/FraJer/Par.hs src/FraJer/Print.hs src/Interpreter.hs
+interpreter : src/FraJer/Abs.hs src/FraJer/Lex.hs src/FraJer/Par.hs src/FraJer/Print.hs src/TypeChecker.hs src/Interpreter.hs
 	${GHC} -o $@ $^
 
 

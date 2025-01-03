@@ -2,10 +2,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module TypeChecker
-    ( SType(..), Type(..), ComplexType(..), FuncParam(..), DetailedFuncType(..),
-      TVEnv, TFEnv, TypeStore(..), TypeMonad(..),
-      typeof, evalSimpleType, evalFuncReturnType, evalParamTypes,
-      checkInstr
+    ( 
+      performTypeCheck, evalFuncReturnType, evalSimpleType, evalParamTypes,
+      SType(..), FuncParam(..), DetailedFuncType(..)
     ) where
 
 import Prelude
@@ -145,6 +144,28 @@ evalParamTypes (PSimple stype (Ident var) : rest) =
     TSimple (stype) : evalParamTypes rest
 evalParamTypes (PFunc (DetFunc paramTypes retType) (Ident func) : rest) =
     TFunction (DetFunc paramTypes retType) : evalParamTypes rest
+
+mapGet :: (Ord k) => (Map k v) -> k -> v
+mapGet map arg = map ! arg
+
+mapSet :: (Ord k) => (Map k v) -> k -> v -> (Map k v)
+mapSet map arg val = insert arg val map
+
+mapHasKey :: (Ord k) => (Map k v) -> k -> Bool
+mapHasKey map arg = member arg map
+
+eP (ParamsNone) = []
+eP (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
+eP (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : eP params
+eP (ParamFunc ftype params (Ident func)) =
+    let funcParams = eP params in
+    let paramTypes = evalParamTypes funcParams in
+    [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)]
+eP (ParamFuncMany ftype params (Ident func) paramsMany) =
+    let funcParams = eP params in
+    let paramTypes = evalParamTypes funcParams in
+    let rest = eP paramsMany in
+    [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)] ++ rest
 
 ------------------------------------------ MONAD -------------------------------------------------
 --newtype WorkingMonad a = WorkingMonad { runWorkingMonad :: ExceptT Error (ReaderT (VEnv, FMEnv) (StateT (Store, ControlFlow) IO)) a }
@@ -768,3 +789,24 @@ checkDebug var = do
             (rhoVT, rhoFT) <- ask
             return (rhoVT, rhoFT)
         _ -> throwError (InvalidDebugArgType t)
+
+
+
+rhoFT0:: TFEnv
+rhoFT0 = fromList []
+
+rhoVT0:: TVEnv
+rhoVT0 = fromList []
+
+tsto0:: TypeStore
+tsto0 = TStore empty 0
+
+
+performTypeCheck :: Instr -> IO (Either Error ())
+performTypeCheck instr = do
+    let typeCheckEnv = (rhoVT0, rhoFT0)
+    let typeCheckState = (tsto0, False)
+    result <- evalStateT (runReaderT (runExceptT (runTypeMonad (checkInstr instr))) typeCheckEnv) typeCheckState
+    return $ case result of
+        Left err -> Left err
+        Right _ -> Right ()

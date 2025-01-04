@@ -405,7 +405,7 @@ checkLambda (Lam ftype params instr) = do
         let retTypes = res
         let retType = evalFuncReturnType ftype
         checkAllTypesEqual retTypes (TSimple retType)
-        return (TFunction funcType) 
+        return (TFunction funcType)
 
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
 -- We will return the list of types and this represents all the possible types returned
@@ -564,6 +564,15 @@ checkStmt (SContinue0) = do
     loopFlag <- getLoopFlag
     if loopFlag then return []
     else throwError ContinueUsageOutsideLoop
+
+checkStmt (SFuncCall (Ident func) args) = do
+    t <- getFuncType func
+    case t of
+        TFunction (DetFunc paramTypes retType) -> do
+            argTypes <- checkArgs args
+            if argTypes == paramTypes then return []
+            else throwError (TypeMismatch (TFunction (DetFunc paramTypes retType)) (TFunction (DetFunc argTypes retType)))
+        _ -> throwError (FunctionNotInScope (Ident func))
 
 checkStmt (SIf expr i0 i1) = do
     t <- checkExpr expr

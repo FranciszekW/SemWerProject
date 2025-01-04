@@ -168,6 +168,7 @@ SBreak.     Stmt1 ::= "break" "(" Expr ")";
 SBreak1.    Stmt1 ::= "break";
 SContinue.  Stmt1 ::= "continue" "outer" "(" Expr ")";
 SContinue0. Stmt1 ::= "continue";
+SFuncCall.  Stmt1 ::= Ident "(" Args ")";
 
 -- Doesn't make sense
 -- define ibreak = IBreak 1;

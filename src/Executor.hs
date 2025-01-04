@@ -640,6 +640,12 @@ iMS (SContinue0) = do
         putControlFlow (0, True, nestingLevel)
         return Nothing
 
+iMS (SFuncCall (Ident func) args) = do
+     f <- mgetfunc (Ident func)
+     arguments <- eMa args
+     _ <- f arguments
+     return Nothing -- result is ignored in a simple function call
+
 iMS (SIf expr i0 i1) = do
     (VBool b) <- eMe expr
     if b then do

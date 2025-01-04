@@ -398,10 +398,14 @@ checkLambda :: Lambda -> TypeMonad Type
 
 checkLambda (Lam ftype params instr) = do
     let paramList = eP params
-    let paramTypes = evalParamTypes paramList
-    let retType = evalFuncReturnType ftype
-    let funcType = DetFunc paramTypes retType
-    return (TFunction funcType)
+    let funcType = DetFunc (evalParamTypes paramList) (evalFuncReturnType ftype)
+    (rhoVT, rhoFT) <- prepareParamEnv paramList
+    local (const (rhoVT, rhoFT)) $ do
+        (res, rhoVT', rhoFT') <- checkInstr instr
+        let retTypes = res
+        let retType = evalFuncReturnType ftype
+        checkAllTypesEqual retTypes (TSimple retType)
+        return (TFunction funcType) 
 
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
 -- We will return the list of types and this represents all the possible types returned

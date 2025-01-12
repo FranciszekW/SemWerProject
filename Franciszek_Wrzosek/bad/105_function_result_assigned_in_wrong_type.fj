@@ -1,0 +1,4 @@
+IntFunc f(none) {
+    return(3)
+};
+Bool x = f(void)

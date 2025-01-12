@@ -1,0 +1,6 @@
+Dict Bool x;
+Dict Bool y;
+x set [10] to (true);
+swap(x, y);
+print(y get [10]);
+print(x has key [10]);

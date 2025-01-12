@@ -1,0 +1,4 @@
+Dict Int a;
+a set [2] to (4);
+a set [3] to (7);
+return (a get [3-1]);

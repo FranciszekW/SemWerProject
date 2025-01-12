@@ -1,0 +1,10 @@
+while(true) {
+    while(true) {
+        for(x = 1 to 10) {
+            print(x);
+            if(x == 4) {
+                break (x)
+            }
+        }
+    }
+}

@@ -1,0 +1,4 @@
+IntFunc f(none) {
+    return(3)
+};
+f(5)

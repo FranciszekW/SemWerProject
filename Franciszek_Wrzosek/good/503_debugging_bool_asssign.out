@@ -1,0 +1,16 @@
+Parse Successful!
+
+Type Check Successful!
+
+Reading: "x" = SimpleVal (VBool False)
+False
+Reading: "x" = SimpleVal (VBool False)
+Reading: "x" = SimpleVal (VBool False)
+Reading: "x" = SimpleVal (VBool False)
+Reading: "x" = SimpleVal (VBool True)
+True
+True
+True
+Computation Successful!
+
+Program returned without a value.

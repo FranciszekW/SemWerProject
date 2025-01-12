@@ -1,9 +1,3 @@
--- TODOS:
--- > Tests to reconsider:
--- > good ()
--- > bad (103)
-
-
 import Prelude
 
 import System.IO (hFlush, stdout, stderr, hPutStrLn)

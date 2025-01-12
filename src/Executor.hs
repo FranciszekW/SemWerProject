@@ -231,106 +231,106 @@ replaceNth xs n newVal = Prelude.take n xs ++ [newVal] ++ Prelude.drop (n + 1) x
 
 ----------------------------------------- EXPRESSIONS ------------------------------------------
 
-eMe :: Expr -> WorkingMonad SimpleValue
+evalExpr :: Expr -> WorkingMonad SimpleValue
 
-eMe (ENum n) = return (VInt n)
+evalExpr (ENum n) = return (VInt n)
 
-eMe (FuncVal (Ident func) args) = do
-    f <- mgetfunc (Ident func)
-    arguments <- eMa args
+evalExpr (FuncVal (Ident func) args) = do
+    f <- getFunc (Ident func)
+    arguments <- evalArguments args
     res <- f arguments
     return res
 
 -- monadic semantics of VarVal using mgetVarVal
-eMe (VarVal (Ident var)) = do
+evalExpr (VarVal (Ident var)) = do
     val <- mgetVarVal var
     case val of
         SimpleVal x -> return x
 
-eMe (EPlus exp0 exp1) = do
-    (VInt x) <- eMe exp0
-    (VInt y) <- eMe exp1
+evalExpr (EPlus exp0 exp1) = do
+    (VInt x) <- evalExpr exp0
+    (VInt y) <- evalExpr exp1
     return (VInt (x + y))
 
-eMe (EMinus exp0 exp1) = do
-    (VInt x) <- eMe exp0
-    (VInt y) <- eMe exp1
+evalExpr (EMinus exp0 exp1) = do
+    (VInt x) <- evalExpr exp0
+    (VInt y) <- evalExpr exp1
     return (VInt (x - y))
 
-eMe (EDiv exp0 exp1) = do
-    (VInt x) <- eMe exp0
-    (VInt y) <- eMe exp1
+evalExpr (EDiv exp0 exp1) = do
+    (VInt x) <- evalExpr exp0
+    (VInt y) <- evalExpr exp1
     if y == 0 then throwError DivByZero
     else return (VInt (x `div` y))
 
-eMe (EMul exp0 exp1) = do
-    (VInt x) <- eMe exp0
-    (VInt y) <- eMe exp1
+evalExpr (EMul exp0 exp1) = do
+    (VInt x) <- evalExpr exp0
+    (VInt y) <- evalExpr exp1
     return (VInt (x * y))
 
-eMe (EMod exp0 exp1) = do
-    (VInt x) <- eMe exp0
-    (VInt y) <- eMe exp1
+evalExpr (EMod exp0 exp1) = do
+    (VInt x) <- evalExpr exp0
+    (VInt y) <- evalExpr exp1
     if y == 0 then throwError ModByZero
     else return (VInt (x `mod` y))
 
-eMe (ENeg exp0) = do
-    (VInt x) <- eMe exp0
+evalExpr (ENeg exp0) = do
+    (VInt x) <- evalExpr exp0
     return (VInt (-x))
 
-eMe (EArray (Ident arr) exp0) = do
-    (VInt i) <- eMe exp0
-    a <- mgetarray (Ident arr)
+evalExpr (EArray (Ident arr) exp0) = do
+    (VInt i) <- evalExpr exp0
+    a <- getArray (Ident arr)
     if i < 0 || i >= toInteger (length a) then throwError (IndexOutOfBounds i)
     else return (a !! fromInteger i)
 
-eMe (EDict (Ident dict) exp0) = do
-    (VInt i) <- eMe exp0
-    d <- mgetdict (Ident dict)
+evalExpr (EDict (Ident dict) exp0) = do
+    (VInt i) <- evalExpr exp0
+    d <- getDict (Ident dict)
     if not (mapHasKey d i) then throwError (KeyNotInDict i)
     else return (d ! i)
 
-eMe (EPostInc (Ident var)) = do
-    (VInt x) <- eMe (VarVal (Ident var))
+evalExpr (EPostInc (Ident var)) = do
+    (VInt x) <- evalExpr (VarVal (Ident var))
     msetVarVal var (SimpleVal (VInt (x + 1)))
     return (VInt x)
 
-eMe (EPreInc (Ident var)) = do
-    (VInt x) <- eMe (VarVal (Ident var))
+evalExpr (EPreInc (Ident var)) = do
+    (VInt x) <- evalExpr (VarVal (Ident var))
     msetVarVal var (SimpleVal (VInt (x + 1)))
     return (VInt (x + 1))
 
-eMe (EPostDec (Ident var)) = do
-    (VInt x) <- eMe (VarVal (Ident var))
+evalExpr (EPostDec (Ident var)) = do
+    (VInt x) <- evalExpr (VarVal (Ident var))
     msetVarVal var (SimpleVal (VInt (x - 1)))
     return (VInt x)
 
-eMe (EPreDec (Ident var)) = do
-    (VInt x) <- eMe (VarVal (Ident var))
+evalExpr (EPreDec (Ident var)) = do
+    (VInt x) <- evalExpr (VarVal (Ident var))
     msetVarVal var (SimpleVal (VInt (x - 1)))
     return (VInt (x - 1))
 
 --boools:
-eMe (BTrue) = return (VBool True)
-eMe (BFalse) = return (VBool False)
+evalExpr (BTrue) = return (VBool True)
+evalExpr (BFalse) = return (VBool False)
 
-eMe (EEq exp0 exp1) = monadicEvalBinarySimplevalOp (==) exp0 exp1
-eMe (ENeq exp0 exp1) = monadicEvalBinarySimplevalOp (/=) exp0 exp1
-eMe (ELt exp0 exp1) = monadicEvalBinaryIntOp (<) exp0 exp1
-eMe (EGt exp0 exp1) = monadicEvalBinaryIntOp (>) exp0 exp1
-eMe (ELeq exp0 exp1) = monadicEvalBinaryIntOp (<=) exp0 exp1
-eMe (EGeq exp0 exp1) = monadicEvalBinaryIntOp (>=) exp0 exp1
+evalExpr (EEq exp0 exp1) = evalBinarySimpleValOp (==) exp0 exp1
+evalExpr (ENeq exp0 exp1) = evalBinarySimpleValOp (/=) exp0 exp1
+evalExpr (ELt exp0 exp1) = evalBinaryIntOp (<) exp0 exp1
+evalExpr (EGt exp0 exp1) = evalBinaryIntOp (>) exp0 exp1
+evalExpr (ELeq exp0 exp1) = evalBinaryIntOp (<=) exp0 exp1
+evalExpr (EGeq exp0 exp1) = evalBinaryIntOp (>=) exp0 exp1
 
-eMe (BNot exp0) = do
-    (VBool x) <- eMe exp0
+evalExpr (BNot exp0) = do
+    (VBool x) <- evalExpr exp0
     return (VBool (not x))
 
-eMe (BOr exp0 exp1) = monadicEvalBinaryBoolOp (||) exp0 exp1
-eMe (BAnd exp0 exp1) = monadicEvalBinaryBoolOp (&&) exp0 exp1
-eMe (BXor exp0 exp1) = monadicEvalBinaryBoolOp (/=) exp0 exp1
+evalExpr (BOr exp0 exp1) = evalBinaryBoolOp (||) exp0 exp1
+evalExpr (BAnd exp0 exp1) = evalBinaryBoolOp (&&) exp0 exp1
+evalExpr (BXor exp0 exp1) = evalBinaryBoolOp (/=) exp0 exp1
 
-eMe (BDictHasKey (Ident dict) exp0) = do
-    (VInt i) <- eMe exp0
+evalExpr (BDictHasKey (Ident dict) exp0) = do
+    (VInt i) <- evalExpr exp0
     (rhoV, _) <- ask
     sto <- getStore
     ComplexVal (VDict d) <- mgetVarVal dict
@@ -338,37 +338,37 @@ eMe (BDictHasKey (Ident dict) exp0) = do
 
 -- helper functions:
 
-monadicEvalBinaryIntOp :: (Integer -> Integer -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
-monadicEvalBinaryIntOp op exp0 exp1 = do
-    valX <- eMe exp0
-    valY <- eMe exp1
+evalBinaryIntOp :: (Integer -> Integer -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
+evalBinaryIntOp op exp0 exp1 = do
+    valX <- evalExpr exp0
+    valY <- evalExpr exp1
     case (valX, valY) of
         (VInt x, VInt y) -> return (VBool (x `op` y))
         -- _ -> throwError $ TypeMismatch (typeof (valX)) (typeof (valY))
 
-monadicEvalBinaryBoolOp :: (Bool -> Bool -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
-monadicEvalBinaryBoolOp op exp0 exp1 = do
-    valX <- eMe exp0
-    valY <- eMe exp1
+evalBinaryBoolOp :: (Bool -> Bool -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
+evalBinaryBoolOp op exp0 exp1 = do
+    valX <- evalExpr exp0
+    valY <- evalExpr exp1
     case (valX, valY) of
         (VBool x, VBool y) -> return (VBool (x `op` y))
         -- _ -> throwError $ TypeMismatch (typeof valX) (typeof valY)
 
 
-monadicEvalBinarySimplevalOp :: (SimpleValue -> SimpleValue -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
-monadicEvalBinarySimplevalOp op exp0 exp1 = do
-    x <- eMe exp0
-    y <- eMe exp1
+evalBinarySimpleValOp :: (SimpleValue -> SimpleValue -> Bool) -> Expr -> Expr -> WorkingMonad SimpleValue
+evalBinarySimpleValOp op exp0 exp1 = do
+    x <- evalExpr exp0
+    y <- evalExpr exp1
     return (VBool (x `op` y))
 
-mgetfunc :: Ident -> WorkingMonad MFunc
-mgetfunc (Ident func) = do
+getFunc :: Ident -> WorkingMonad MFunc
+getFunc (Ident func) = do
     (_, rhoF) <- ask
     case Data.Map.lookup func rhoF of
         Just f -> return f
 
-mgetarray :: Ident -> WorkingMonad Arr
-mgetarray (Ident arr) = do
+getArray :: Ident -> WorkingMonad Arr
+getArray (Ident arr) = do
     (rhoV, _) <- ask
     case Data.Map.lookup arr rhoV of
         Just (loc, _) -> do
@@ -376,8 +376,8 @@ mgetarray (Ident arr) = do
             ComplexVal (VArray a) <- mgetVarVal arr
             return a
 
-mgetdict :: Ident -> WorkingMonad Dict
-mgetdict (Ident dict) = do
+getDict :: Ident -> WorkingMonad Dict
+getDict (Ident dict) = do
     (rhoV, _) <- ask
     case Data.Map.lookup dict rhoV of
         Just (loc, _) -> do
@@ -386,11 +386,11 @@ mgetdict (Ident dict) = do
             return d
 
 ------------------------------------------ INSTRUCTIONS ------------------------------------------
-iMI :: Instr -> WorkingMonad (Maybe SimpleValue, VEnv, FMEnv)
+evalInstr :: Instr -> WorkingMonad (Maybe SimpleValue, VEnv, FMEnv)
 
 -- Version with new return type
-iMI (ISeq instr0 instr1) = do
-    (res0, rhoV0, rhoF0) <- iMI instr0
+evalInstr (ISeq instr0 instr1) = do
+    (res0, rhoV0, rhoF0) <- evalInstr instr0
     case res0 of
         Just val -> return (Just val, rhoV0, rhoF0)
         Nothing -> do
@@ -398,45 +398,45 @@ iMI (ISeq instr0 instr1) = do
             if  (breakCount > 0 || continueFlag) then
                 return (Nothing, rhoV0, rhoF0)
             else do
-                local (const (rhoV0, rhoF0)) (iMI instr1)
+                local (const (rhoV0, rhoF0)) (evalInstr instr1)
 
-iMI (IDef def) = do
-    (rhoV, rhoF) <- iMD def
+evalInstr (IDef def) = do
+    (rhoV, rhoF) <- evalDef def
     return (Nothing, rhoV, rhoF) -- definitions don't return anything
 
-iMI (IStmt stmt) = do
+evalInstr (IStmt stmt) = do
     (rhoV, rhoF) <- ask
-    res <- iMS stmt
+    res <- evalStmt stmt
     case res of
         Just val -> return (Just val, rhoV, rhoF)
         Nothing -> return (Nothing, rhoV, rhoF)
 
-iMI (ISpecStmt specStmt) = do
-    (rhoV, rhoF) <- iMSpecS specStmt
+evalInstr (ISpecStmt specStmt) = do
+    (rhoV, rhoF) <- evalSpecStmt specStmt
     return (Nothing, rhoV, rhoF)
 
 
 ------------------------------------------ DEFINITIONS ------------------------------------------
 
-iMD :: Def -> WorkingMonad (VEnv, FMEnv)
+evalDef :: Def -> WorkingMonad (VEnv, FMEnv)
 
-iMD (VarDef stype (Ident var) expr) = do
+evalDef (VarDef stype (Ident var) expr) = do
     (rhoV, rhoF) <- ask
     sto <- getStore
-    val <- eMe expr
+    val <- evalExpr expr
     let (loc, sto') = newloc sto
     let rhoV' = mapSet rhoV var (loc, (False, False))
     controlFlow <- getControlFlow
     put (setVarVal rhoV' sto' var (SimpleVal val), controlFlow)
     return (rhoV', rhoF)
 
-iMD (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
+evalDef (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
     (rhoV, rhoF) <- ask
     sto <- getStore
-    (VInt size) <- eMe exprSize
+    (VInt size) <- evalExpr exprSize
     if size < 0 then throwError (InvalidArraySize size)
     else do
-        initExprRes <- eMe exprInitVal
+        initExprRes <- evalExpr exprInitVal
         case initExprRes of
             VInt initVal -> do
                 let (loc, sto') = newloc sto
@@ -453,11 +453,11 @@ iMD (ArrDefInit stype (Ident arr) exprSize exprInitVal) = do
                 put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
                 return (rhoV', rhoF)
 
-iMD (ArrDef stype (Ident arr) exprSize) = do
+evalDef (ArrDef stype (Ident arr) exprSize) = do
     let arrType = evalSimpleType stype
     (rhoV, rhoF) <- ask
     sto <- getStore
-    (VInt size) <- eMe exprSize
+    (VInt size) <- evalExpr exprSize
     if size < 0 then throwError (InvalidArraySize size)
     else do
         let (loc, sto') = newloc sto
@@ -467,7 +467,7 @@ iMD (ArrDef stype (Ident arr) exprSize) = do
         put (setVarVal rhoV' sto' arr (ComplexVal (VArray arrVal)), controlFlow)
         return (rhoV', rhoF)
 
-iMD (DictDef stype (Ident dict)) = do
+evalDef (DictDef stype (Ident dict)) = do
     (rhoV, rhoF) <- ask
     sto <- getStore
     let (loc, sto') = newloc sto
@@ -476,14 +476,14 @@ iMD (DictDef stype (Ident dict)) = do
     put (setVarVal rhoV' sto' dict (ComplexVal (VDict empty)), controlFlow)
     return (rhoV', rhoF)
 
-iMD (FuncDef ftype (Ident func) params instr) = do
+evalDef (FuncDef ftype (Ident func) params instr) = do
     (rhoV, rhoF) <- ask
     let x :: [FuncArg] -> WorkingMonad(SimpleValue) 
         x = \args -> do 
-            let paramList = eP params
-            (rhoV, rhoF) <- msetarguments (paramList) args
+            let paramList = evalParams params
+            (rhoV, rhoF) <- setArguments (paramList) args
             let rhoF' = mapSet rhoF func x
-            (res, _, _) <- local (const (rhoV, rhoF')) (iMI instr)
+            (res, _, _) <- local (const (rhoV, rhoF')) (evalInstr instr)
             case res of
                 Just val -> return (val)
                 Nothing -> case (evalFuncReturnType ftype) of
@@ -492,122 +492,92 @@ iMD (FuncDef ftype (Ident func) params instr) = do
     let rhoF' = mapSet rhoF func x
     return (rhoV, rhoF')
 
-msetarguments :: [FuncParam] -> [FuncArg] -> WorkingMonad (VEnv, FMEnv)
-msetarguments [] [] = do
+setArguments :: [FuncParam] -> [FuncArg] -> WorkingMonad (VEnv, FMEnv)
+setArguments [] [] = do
     (rhoV, rhoF) <- ask
     return (rhoV, rhoF)
 
-msetarguments (PSimple stype (Ident var) : restParams) (SimpleArg val : restArgs) = do
+setArguments (PSimple stype (Ident var) : restParams) (SimpleArg val : restArgs) = do
     (rhoV, rhoF) <- ask
     sto <- getStore
     let (loc, sto') = newloc sto
     let rhoV' = mapSet rhoV var (loc, (False, False))
     putStore (setVarVal rhoV' sto' var (SimpleVal val))
     local (const (rhoV', rhoF)) $ do
-        msetarguments restParams restArgs
+        setArguments restParams restArgs
 
-msetarguments (PFunc ftype (Ident func) : restParams) (FArg f : restArgs) = do
+setArguments (PFunc ftype (Ident func) : restParams) (FArg f : restArgs) = do
     (rhoV, rhoF) <- ask
     let rhoF' = mapSet rhoF func f
     local (const (rhoV, rhoF')) $ do
-        msetarguments restParams restArgs
+        setArguments restParams restArgs
 
 ---------------------------------- ARGUMENTS AND PARAMETERS ----------------------------------------
 
-eMa :: Args -> WorkingMonad [FuncArg]
+evalArguments :: Args -> WorkingMonad [FuncArg]
 
 
-eMa (ArgsVoid) = return []
-eMa (ArgsOne expr) = do
-    val <- eMe expr
+evalArguments (ArgsVoid) = return []
+evalArguments (ArgsOne expr) = do
+    val <- evalExpr expr
     return [SimpleArg val]
-eMa (ArgsMany expr args) = do
-    val <- eMe expr
-    vals <- eMa args
+evalArguments (ArgsMany expr args) = do
+    val <- evalExpr expr
+    vals <- evalArguments args
     return (SimpleArg val : vals)
-eMa (ArgsLambda lambda) = do
-    f <- eML lambda
+evalArguments (ArgsLambda lambda) = do
+    f <- evalLambda lambda
     return [FArg f]
-eMa (ArgsLambdaMany lambda args) = do
-    f <- eML lambda
-    fs <- eMa args
+evalArguments (ArgsLambdaMany lambda args) = do
+    f <- evalLambda lambda
+    fs <- evalArguments args
     return (FArg f : fs)
-eMa (ArgsFunc func) = do
-    f <- mgetfunc func
+evalArguments (ArgsFunc func) = do
+    f <- getFunc func
     return [FArg f]
-eMa (ArgsFuncMany func args) = do
-    f <- mgetfunc func
-    fs <- eMa args
+evalArguments (ArgsFuncMany func args) = do
+    f <- getFunc func
+    fs <- evalArguments args
     return (FArg f : fs)
 
-eML :: Lambda -> WorkingMonad MFunc
+evalLambda :: Lambda -> WorkingMonad MFunc
 
-eML (Lam ftype params instr) = do
+evalLambda (Lam ftype params instr) = do
     (rhoV, rhoF) <- ask
     let x :: [FuncArg] -> WorkingMonad(SimpleValue) 
         x = \args -> do 
-            let paramList = eP params
-            (rhoV, rhoF) <- msetarguments (paramList) args
-            (res, _, _) <- local (const (rhoV, rhoF)) (iMI instr)
+            let paramList = evalParams params
+            (rhoV, rhoF) <- setArguments (paramList) args
+            (res, _, _) <- local (const (rhoV, rhoF)) (evalInstr instr)
             case res of
                 Just val -> return (val)
                 Nothing -> return (VInt 0)
     return x
 
---eMP :: Params -> WorkingMonad [FuncParam]
---
---eMP (ParamsNone) = return []
---eMP (ParamVar stype (Ident var)) = return [PSimple (evalSimpleType stype) (Ident var)]
---eMP (ParamVarMany stype (Ident var) params) = do
---    rest <- eMP params
---    return ((PSimple (evalSimpleType stype) (Ident var)) : rest)
---eMP (ParamFunc ftype params (Ident func)) = do
---    funcParams <- eMP params
---    paramTypes <- evalParamTypes funcParams
---    returnType <- evalFuncReturnType ftype
---    return [PFunc (DetFunc paramTypes returnType) (Ident func)]
---eMP (ParamFuncMany ftype params (Ident func) paramsMany) = do
---    funcParams <- eMP params
---    paramTypes <- evalParamTypes funcParams
---    rest <- eMP paramsMany
---    returnType <- evalFuncReturnType ftype
---    return ((PFunc (DetFunc paramTypes returnType) (Ident func)) : rest)
-
-
 -- Parameters
-eP :: Params -> [FuncParam]
+evalParams :: Params -> [FuncParam]
 
-{-
-ParamsNone.      Params ::= "none";
-ParamVar.        Params ::= SType Ident;
--- big decision here, in parameters we don't say exactly how the function looks like,
--- we only specify what it returns.
-ParamFunc.       Params ::= FType Ident;
-ParamVarMany.    Params ::= SType Ident "," Params;
-ParamFuncMany.   Params ::= FType Ident "," Params;
--}
-
-eP (ParamsNone) = []
-eP (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
-eP (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : eP params
-eP (ParamFunc ftype params (Ident func)) =
-    let funcParams = eP params in
+evalParams (ParamsNone) = []
+evalParams (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
+evalParams (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : evalParams params
+evalParams (ParamFunc ftype params (Ident func)) =
+    let funcParams = evalParams params in
     let paramTypes = evalParamTypes funcParams in
     [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)]
-eP (ParamFuncMany ftype params (Ident func) paramsMany) =
-    let funcParams = eP params in
+evalParams (ParamFuncMany ftype params (Ident func) paramsMany) =
+    let funcParams = evalParams params in
     let paramTypes = evalParamTypes funcParams in
-    let rest = eP paramsMany in
+    let rest = evalParams paramsMany in
     [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)] ++ rest
 
 ------------------------------------------ STATEMENTS ------------------------------------------
 
-iMS :: Stmt -> WorkingMonad (Maybe SimpleValue)
+evalStmt :: Stmt -> WorkingMonad (Maybe SimpleValue)
 
-iMS (SSkip) = return Nothing
+evalStmt (SSkip) = return Nothing
 
-iMS (SBreak exp0) = do
-    (VInt n) <- eMe exp0
+evalStmt (SBreak exp0) = do
+    (VInt n) <- evalExpr exp0
     (_, _, nestingLevel) <- getControlFlow
     if n < 0 then throwError (InvalidBreakArgument n)
     else do
@@ -616,15 +586,15 @@ iMS (SBreak exp0) = do
             putControlFlow (n, False, nestingLevel)
             return Nothing
 
-iMS (SBreak1) = do
+evalStmt (SBreak1) = do
     (_, _, nestingLevel) <- getControlFlow
     if nestingLevel < 1 then throwError (TooLargeBreakArgument 1)
     else do
         putControlFlow (1, False, nestingLevel)
         return Nothing
 
-iMS (SContinue exp0) = do
-    (VInt n) <- eMe exp0
+evalStmt (SContinue exp0) = do
+    (VInt n) <- evalExpr exp0
     (_, _, nestingLevel) <- getControlFlow
     if n < 0 then throwError (InvalidContinueArgument n)
     else do
@@ -633,35 +603,35 @@ iMS (SContinue exp0) = do
             putControlFlow (n, True, nestingLevel)
             return Nothing
 
-iMS (SContinue0) = do
+evalStmt (SContinue0) = do
     (_, _, nestingLevel) <- getControlFlow
     if nestingLevel < 1 then throwError (TooLargeContinueArgument 1)
     else do
         putControlFlow (0, True, nestingLevel)
         return Nothing
 
-iMS (SFuncCall (Ident func) args) = do
-     f <- mgetfunc (Ident func)
-     arguments <- eMa args
+evalStmt (SFuncCall (Ident func) args) = do
+     f <- getFunc (Ident func)
+     arguments <- evalArguments args
      _ <- f arguments
      return Nothing -- result is ignored in a simple function call
 
-iMS (SIf expr i0 i1) = do
-    (VBool b) <- eMe expr
+evalStmt (SIf expr i0 i1) = do
+    (VBool b) <- evalExpr expr
     if b then do
-        (res1, _, _) <- iMI i0
+        (res1, _, _) <- evalInstr i0
         return res1
     else do
-        (res2, _, _) <- iMI i1
+        (res2, _, _) <- evalInstr i1
         return res2
 
-iMS (SWhile expr i) = do
+evalStmt (SWhile expr i) = do
     (bc, cf, nl) <- getControlFlow
     putControlFlow (bc, cf, nl + 1)
     let x = do
-        (VBool b) <- eMe expr
+        (VBool b) <- evalExpr expr
         if b then do
-            (res, rhoV, rhoF) <- iMI i -- instructions in while loop can modify the environment
+            (res, rhoV, rhoF) <- evalInstr i -- instructions in while loop can modify the environment
             case res of
                 Just val -> do
                     putControlFlow (0, False, 0) -- reset the flags
@@ -681,17 +651,17 @@ iMS (SWhile expr i) = do
             return Nothing
     x
 
-iMS (SFor (Ident var) exprFrom exprTo instr) = do
-    (VInt from) <- eMe exprFrom
-    (VInt to) <- eMe exprTo
-    (rhoV, rhoF) <- iMD (VarDef (STI STInt) (Ident var) (ENum from))
+evalStmt (SFor (Ident var) exprFrom exprTo instr) = do
+    (VInt from) <- evalExpr exprFrom
+    (VInt to) <- evalExpr exprTo
+    (rhoV, rhoF) <- evalDef (VarDef (STI STInt) (Ident var) (ENum from))
     (bc, cf, nl) <- getControlFlow
     putControlFlow (bc, cf, nl + 1)
     local (const (rhoV, rhoF)) $ do
         let x = do
-            (VInt val) <- eMe (VarVal (Ident var))
+            (VInt val) <- evalExpr (VarVal (Ident var))
             if val <= to then do
-                (res, rhoV, rhoF) <- iMI instr
+                (res, rhoV, rhoF) <- evalInstr instr
                 case res of
                     Just val -> do
                         putControlFlow (0, False, 0) -- reset the flags
@@ -713,50 +683,53 @@ iMS (SFor (Ident var) exprFrom exprTo instr) = do
                 return Nothing
         x
 
-iMS (SReturn expr) = do
-    val <- eMe expr
+evalStmt (SReturn expr) = do
+    val <- evalExpr expr
     return (Just val)
 
-iMS (SPrint expr) = do
-    val <- eMe expr
-    liftIO $ print val
+-- Print only the value without the type
+evalStmt (SPrint expr) = do
+    val <- evalExpr expr
+    case val of
+        VInt n -> liftIO $ print n
+        VBool b -> liftIO $ print b
     return Nothing
 
-iMS (VarAssign (Ident var) expr) = do
-    val <- eMe expr
+evalStmt (VarAssign (Ident var) expr) = do
+    val <- evalExpr expr
     msetVarVal var (SimpleVal val)
     return Nothing
 
-iMS (VarAssignPlus (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))        -- todo: throw error if it is not int
+evalStmt (VarAssignPlus (Ident var) expr) = do
+    val <- evalExpr expr
+    (VInt m) <- evalExpr (VarVal (Ident var))        -- todo: throw error if it is not int
     case val of
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (n + m)))
             return (Nothing)
 --        _ -> throwError (TypeMismatch (TSimple STInt) (typeof val)) -- static type checker will catch this
 
-iMS (VarAssignMinus (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
+evalStmt (VarAssignMinus (Ident var) expr) = do
+    val <- evalExpr expr
+    (VInt m) <- evalExpr (VarVal (Ident var))
     case val of
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (m - n)))
             return (Nothing)
 --        _ -> throwError (TypeMismatch SType FType) --static type checker should catch this
 
-iMS (VarAssignMul (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
+evalStmt (VarAssignMul (Ident var) expr) = do
+    val <- evalExpr expr
+    (VInt m) <- evalExpr (VarVal (Ident var))
     case val of
         VInt n -> do
             msetVarVal var (SimpleVal (VInt (n * m)))
             return (Nothing)
 --        _ -> throwError (TypeMismatch SType FType) static type checker should catch this
 
-iMS (VarAssignDiv (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
+evalStmt (VarAssignDiv (Ident var) expr) = do
+    val <- evalExpr expr
+    (VInt m) <- evalExpr (VarVal (Ident var))
     case val of
         VInt n -> do
             if n == 0 then throwError DivByZero
@@ -765,9 +738,9 @@ iMS (VarAssignDiv (Ident var) expr) = do
                 return (Nothing)
 --        _ -> throwError (TypeMismatch SType FType) --static type checker should catch this
 
-iMS (VarAssignMod (Ident var) expr) = do
-    val <- eMe expr
-    (VInt m) <- eMe (VarVal (Ident var))
+evalStmt (VarAssignMod (Ident var) expr) = do
+    val <- evalExpr expr
+    (VInt m) <- evalExpr (VarVal (Ident var))
     case val of
         VInt n -> do
             if n == 0 then throwError ModByZero
@@ -776,67 +749,67 @@ iMS (VarAssignMod (Ident var) expr) = do
                 return (Nothing)
 --        _ -> throwError (TypeMismatch SType FType) --todo: write actural type
 
-iMS (VarInc (Ident var)) = iMS (VarAssignPlus (Ident var) (ENum 1))
+evalStmt (VarInc (Ident var)) = evalStmt (VarAssignPlus (Ident var) (ENum 1))
 
-iMS (VarDec (Ident var)) = iMS (VarAssignMinus (Ident var) (ENum 1))
+evalStmt (VarDec (Ident var)) = evalStmt (VarAssignMinus (Ident var) (ENum 1))
 
-iMS (ArrElSet (Ident arr) exprIndex exprVal) = do
-    val <- eMe exprVal
-    (VInt index) <- eMe exprIndex
-    a <- mgetarray (Ident arr)
+evalStmt (ArrElSet (Ident arr) exprIndex exprVal) = do
+    val <- evalExpr exprVal
+    (VInt index) <- evalExpr exprIndex
+    a <- getArray (Ident arr)
     if index < 0 || (fromInteger index) >= (length a) then throwError (IndexOutOfBounds index)
     else do
         msetVarVal arr (ComplexVal (VArray (replaceNth a (fromInteger index) val)))
         return (Nothing)
 
-iMS (DictElSet (Ident dict) exprKey exprVal) = do
-    val <- eMe exprVal
-    (VInt key) <- eMe exprKey
-    d <- mgetdict (Ident dict)
+evalStmt (DictElSet (Ident dict) exprKey exprVal) = do
+    val <- evalExpr exprVal
+    (VInt key) <- evalExpr exprKey
+    d <- getDict (Ident dict)
     msetVarVal dict (ComplexVal (VDict (mapSet d key val)))
     return (Nothing)
 
 
 ------------------------------------------ SPECIAL STATEMENTS ------------------------------------------
 
-mgetvarloc :: Ident -> WorkingMonad (Loc, DebugFlags)
+getVarLoc :: Ident -> WorkingMonad (Loc, DebugFlags)
 
-mgetvarloc (Ident var) = do
+getVarLoc (Ident var) = do
     (rhoV, _) <- ask
     case Data.Map.lookup var rhoV of
         Just (loc, flags) -> return (loc, flags)
 
-iMSpecS :: SpecStmt -> WorkingMonad (VEnv, FMEnv)
+evalSpecStmt :: SpecStmt -> WorkingMonad (VEnv, FMEnv)
 
 
-iMSpecS (SSwap (Ident var1) (Ident var2)) = do
+evalSpecStmt (SSwap (Ident var1) (Ident var2)) = do
     (rhoV, rhoF) <- ask
-    (loc1, _) <- mgetvarloc (Ident var1)
-    (loc2, _) <- mgetvarloc (Ident var2)
+    (loc1, _) <- getVarLoc (Ident var1)
+    (loc2, _) <- getVarLoc (Ident var2)
     let rhoV' = setVarLoc (setVarLoc rhoV var1 loc2) var2 loc1
     return (rhoV', rhoF)
 
-iMSpecS (DebugAssEnable (Ident var)) = do
+evalSpecStmt (DebugAssEnable (Ident var)) = do
     (rhoV, rhoF) <- ask
-    (loc, (readFlag, _)) <- mgetvarloc (Ident var)
+    (loc, (readFlag, _)) <- getVarLoc (Ident var)
     let rhoV' = mapSet rhoV var (loc, (readFlag, True))
     return (rhoV', rhoF)
 
-iMSpecS (DebugAssDisable (Ident var)) = do
+evalSpecStmt (DebugAssDisable (Ident var)) = do
     (rhoV, rhoF) <- ask
-    (loc, (readFlag, _)) <- mgetvarloc (Ident var)
+    (loc, (readFlag, _)) <- getVarLoc (Ident var)
     let rhoV' = mapSet rhoV var (loc, (readFlag, False))
     return (rhoV', rhoF)
 
-iMSpecS (DebugReadEnable (Ident var)) = do
+evalSpecStmt (DebugReadEnable (Ident var)) = do
     (rhoV, rhoF) <- ask
-    (loc, (_, writeFlag)) <- mgetvarloc (Ident var)
+    (loc, (_, writeFlag)) <- getVarLoc (Ident var)
     let rhoV' = mapSet rhoV var (loc, (True, writeFlag))
     return (rhoV', rhoF)
 
-iMSpecS (DebugReadDisable (Ident var)) = do
+evalSpecStmt (DebugReadDisable (Ident var)) = do
     (rhoV, rhoF) <- ask
-    (loc, (_, writeFlag)) <- mgetvarloc (Ident var)
+    (loc, (_, writeFlag)) <- getVarLoc (Ident var)
     let rhoV' = mapSet rhoV var (loc, (False, writeFlag))
     return (rhoV', rhoF)
 
@@ -857,7 +830,7 @@ initialState = (sto0, (0, False, 0))
 
 runProgram :: Instr -> IO (Either Error (Maybe SimpleValue))
 runProgram instr = do
-    res <- evalStateT (runReaderT (runExceptT (runWorkingMonad (iMI instr))) initialEnv) initialState
+    res <- evalStateT (runReaderT (runExceptT (runWorkingMonad (evalInstr instr))) initialEnv) initialState
     case res of
         Left err -> return (Left err)
         Right (val, _, _) -> return (Right val)

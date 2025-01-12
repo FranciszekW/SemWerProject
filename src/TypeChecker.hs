@@ -107,17 +107,17 @@ mapSet map arg val = insert arg val map
 mapHasKey :: (Ord k) => (Map k v) -> k -> Bool
 mapHasKey map arg = member arg map
 
-eP (ParamsNone) = []
-eP (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
-eP (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : eP params
-eP (ParamFunc ftype params (Ident func)) =
-    let funcParams = eP params in
+evalParams (ParamsNone) = []
+evalParams (ParamVar stype (Ident var)) = [PSimple (evalSimpleType stype) (Ident var)]
+evalParams (ParamVarMany stype (Ident var) params) = (PSimple (evalSimpleType stype) (Ident var)) : evalParams params
+evalParams (ParamFunc ftype params (Ident func)) =
+    let funcParams = evalParams params in
     let paramTypes = evalParamTypes funcParams in
     [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)]
-eP (ParamFuncMany ftype params (Ident func) paramsMany) =
-    let funcParams = eP params in
+evalParams (ParamFuncMany ftype params (Ident func) paramsMany) =
+    let funcParams = evalParams params in
     let paramTypes = evalParamTypes funcParams in
-    let rest = eP paramsMany in
+    let rest = evalParams paramsMany in
     [PFunc (DetFunc paramTypes (evalFuncReturnType ftype)) (Ident func)] ++ rest
 
 ------------------------------------------ MONAD -------------------------------------------------
@@ -397,7 +397,7 @@ checkArgs (ArgsFuncMany (Ident func) args) = do
 checkLambda :: Lambda -> TypeMonad Type
 
 checkLambda (Lam ftype params instr) = do
-    let paramList = eP params
+    let paramList = evalParams params
     let funcType = DetFunc (evalParamTypes paramList) (evalFuncReturnType ftype)
     (rhoVT, rhoFT) <- prepareParamEnv paramList
     local (const (rhoVT, rhoFT)) $ do
@@ -498,7 +498,7 @@ checkDef (DictDef stype (Ident dict)) = do
 -- based on the function parameters.
 checkDef (FuncDef ftype (Ident func) params instr) = do
     (rhoVT0, rhoFT0) <- ask
-    let paramList = eP params
+    let paramList = evalParams params
     let funcType = DetFunc (evalParamTypes paramList) (evalFuncReturnType ftype)
     (rhoVT, rhoFT) <- prepareParamEnv paramList
     let rhoFT' = setFuncType rhoFT func funcType

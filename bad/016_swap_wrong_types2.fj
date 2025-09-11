@@ -1,3 +1,0 @@
-Array Int x [2];
-Array Int y [2];
-swap(x,y);

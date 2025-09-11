@@ -1,4 +1,0 @@
-Int x = 3;
-Int y = 2;
-Int z = 1;
-swap(x, y, z);

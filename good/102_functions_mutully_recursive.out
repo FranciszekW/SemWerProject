@@ -2,26 +2,26 @@ Parse Successful!
 
 Type Check Successful!
 
-VInt 120
-VInt 60
-VInt 30
-VInt 15
-VInt 46
-VInt 23
-VInt 70
-VInt 35
-VInt 106
-VInt 53
-VInt 160
-VInt 80
-VInt 40
-VInt 20
-VInt 10
-VInt 5
-VInt 16
-VInt 8
-VInt 4
-VInt 2
-VInt 1
+120
+60
+30
+15
+46
+23
+70
+35
+106
+53
+160
+80
+40
+20
+10
+5
+16
+8
+4
+2
+1
 Computation Successful!
 Program returned with value: VInt 1

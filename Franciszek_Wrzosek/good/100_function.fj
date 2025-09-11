@@ -1,5 +1,0 @@
-BoolFunc f(Int x) {
-    return (x == 10);
-};
-print(f(10));
-return(f(9));

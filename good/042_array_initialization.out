@@ -2,8 +2,8 @@ Parse Successful!
 
 Type Check Successful!
 
-VBool False
-VInt 1
+False
+1
 Computation Successful!
 
 Program returned without a value.

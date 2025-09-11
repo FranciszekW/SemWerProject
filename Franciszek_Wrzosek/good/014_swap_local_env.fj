@@ -1,9 +1,0 @@
-Int x = 1;
-Int y = 2;
-while (x == 1) {
-    swap (x, y);
-    print(x);
-    print(y);
-};
-print(x);
-print(y);

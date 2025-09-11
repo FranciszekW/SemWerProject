@@ -2,12 +2,11 @@
 
 # Makefile for building the parser and test program.
 
-BNFC       = bnfc
-GHC        = ghc
-GHC_OPTS   = -Wall
-HAPPY      = happy
+BNFC       = stack exec -- bnfc
+GHC        = stack exec -- ghc
+HAPPY      = stack exec -- happy
 HAPPY_OPTS = --array --info --ghc --coerce
-ALEX       = alex
+ALEX       = stack exec -- alex
 ALEX_OPTS  = --ghc
 
 # List of goals not corresponding to file names.

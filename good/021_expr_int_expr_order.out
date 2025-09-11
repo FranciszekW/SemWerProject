@@ -2,10 +2,10 @@ Parse Successful!
 
 Type Check Successful!
 
-VInt 6
-VInt 8
-VInt (-7)
-VInt 3
+6
+8
+-7
+3
 Computation Successful!
 
 Program returned without a value.

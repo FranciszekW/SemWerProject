@@ -1,8 +1,0 @@
-Int x = 1;
-if(x > 0){
-    Int y = x + 1;
-    Int x = y + 2;
-    print(x);
-    print(y);
-};
-print(x);

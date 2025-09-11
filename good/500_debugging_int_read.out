@@ -3,14 +3,14 @@ Parse Successful!
 Type Check Successful!
 
 Reading: "x" = SimpleVal (VInt 3)
-VInt 3
+3
 Reading: "x" = SimpleVal (VInt 3)
-VInt 0
+0
 Reading: "x" = SimpleVal (VInt 3)
-VInt 5
-VInt 3
-VInt 0
-VInt 5
+5
+3
+0
+5
 Computation Successful!
 
 Program returned without a value.

@@ -27,3 +27,4 @@ src/FraJer/*
 interpreter
 Interpreter
 .test/
+.idea/

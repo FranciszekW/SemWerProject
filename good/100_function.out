@@ -2,6 +2,6 @@ Parse Successful!
 
 Type Check Successful!
 
-VBool True
+True
 Computation Successful!
 Program returned with value: VBool False

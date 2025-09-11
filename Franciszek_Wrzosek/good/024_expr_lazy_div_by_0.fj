@@ -1,5 +1,0 @@
-if(false) {
-    print(1 / 0);
-} else {
-    print(1);
-}

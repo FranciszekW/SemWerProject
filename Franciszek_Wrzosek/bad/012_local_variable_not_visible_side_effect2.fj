@@ -1,4 +1,0 @@
-if(true){
-    Int x = 1;
-};
-print(x++);

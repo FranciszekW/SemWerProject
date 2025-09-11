@@ -8,13 +8,13 @@ process_directory() {
         if [ -f "$test_file" ]; then
             base_name=$(basename "$test_file" .fj)
             echo -e "\n--------------------------------------------------"
-            echo -e "Test: $base_name"
+            echo -e "Test: $dir/$base_name"
             echo -e "--------------------------------------------------\n"
-            echo -e "File: $base_name.fj\n"
+            echo -e "File: $dir/$base_name.fj\n"
             cat "$dir/$base_name.fj"
-            echo -e "\n\nFile: $base_name.out\n"
+            echo -e "\n\nFile: $dir/$base_name.out\n"
             cat "$dir/$base_name.out"
-            echo -e "\n\nFile: $base_name.err\n"
+            echo -e "\n\nFile: $dir/$base_name.err\n"
             cat "$dir/$base_name.err"
         fi
     done

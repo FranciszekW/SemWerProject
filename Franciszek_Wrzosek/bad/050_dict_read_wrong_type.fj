@@ -1,3 +1,0 @@
-Dict Bool a;
-a set [3] to (true);
-Int x = a get [3];

@@ -1,2 +1,0 @@
-Array Bool a [1];
-Int x = a[0];

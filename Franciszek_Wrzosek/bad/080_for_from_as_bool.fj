@@ -1,3 +1,0 @@
-for(x = true to 7){
-    print(x);
-}

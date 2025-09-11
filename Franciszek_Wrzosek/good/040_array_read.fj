@@ -1,2 +1,0 @@
-Array Int x[1]; /* on default initialized with 0 */
-print(x[0]);

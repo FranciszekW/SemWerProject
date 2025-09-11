@@ -2,9 +2,9 @@ Parse Successful!
 
 Type Check Successful!
 
-VInt 1
-VInt 4
-VBool False
+1
+4
+False
 Computation Successful!
 
 Program returned without a value.

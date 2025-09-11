@@ -1,1 +1,0 @@
-Error: Type mismatch: TSimple (SimpleInt STInt) and TComplex (TArray (SimpleInt STInt))

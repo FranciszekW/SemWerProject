@@ -2,13 +2,13 @@ Parse Successful!
 
 Type Check Successful!
 
-VInt 3
+3
 Writing: "x" = SimpleVal (VInt 4)
 Writing: "x" = SimpleVal (VInt 6)
-VInt 6
+6
 Writing: "x" = SimpleVal (VInt 2)
-VInt 2
-VInt 5
+2
+5
 Computation Successful!
 
 Program returned without a value.

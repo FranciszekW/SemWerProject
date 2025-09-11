@@ -2,9 +2,9 @@ Parse Successful!
 
 Type Check Successful!
 
-VBool True
-VBool False
-VBool False
+True
+False
+False
 Computation Successful!
 
 Program returned without a value.

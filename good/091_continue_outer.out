@@ -2,14 +2,14 @@ Parse Successful!
 
 Type Check Successful!
 
-VInt 1
-VInt 2
-VInt 3
-VInt 4
-VInt 1
-VInt 2
-VInt 3
-VInt 4
+1
+2
+3
+4
+1
+2
+3
+4
 Computation Successful!
 
 Program returned without a value.

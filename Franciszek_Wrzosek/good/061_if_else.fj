@@ -1,5 +1,0 @@
-if(3 < 2) {
-    print(3);
-}else {
-    print(true);
-}

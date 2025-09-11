@@ -1,5 +1,0 @@
-Int x = 1;
-Int y = 2;
-swap (x, y);
-print(x);
-print(y);

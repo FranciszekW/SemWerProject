@@ -1,4 +1,0 @@
-Int x = 3;
-Array Int a[x*x];
-x = 1;
-print(a[x]);

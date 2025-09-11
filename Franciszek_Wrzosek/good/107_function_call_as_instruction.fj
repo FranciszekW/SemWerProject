@@ -1,6 +1,0 @@
-Int x = 0;
-IntFunc f(none) {
-    x++;
-};
-f(void);
-print(x);

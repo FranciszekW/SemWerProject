@@ -1,3 +1,0 @@
-Array Bool x[2];
-x[0] = (true);
-print(x[0]);

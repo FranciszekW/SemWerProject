@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 TMP_OUT=$(mktemp)
 TMP_ERR=$(mktemp)
